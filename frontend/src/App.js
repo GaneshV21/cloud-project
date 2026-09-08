@@ -14,6 +14,9 @@ import Users from "./components/page/Users/Users";
 import Profile from "./components/page/Profile/Profile";
 import Billing from "./components/page/Billing/Billing";
 import PATH from "../src/utils/Path";
+import PrivateRoutes from "./utils/private-routes";
+import NotFoundPage from "./utils/not-found";
+import CreateInstance from "./pages/Instances/CreateInstance";
 function App() {
   return (
     <div className="App">
@@ -21,18 +24,22 @@ function App() {
         <Routes>
           <Route path={PATH?.Login} element={<Login />} />
           <Route path={PATH.Signup} element={<Signup />} />
-          <Route element={<MenuItems />}>
-            <Route path={PATH.Dashboard} element={<Dashboard />} />
-            <Route path={PATH.Instances} element={<Instances />} />
-            <Route path={PATH.Keypairs} element={<Keypairs />} />
-            <Route path={PATH.Volumes} element={<Volumes />} />
-            <Route path={PATH.Networks} element={<Networks />} />
-            <Route path={PATH.SecurityGroups} element={<SecurityGroups />} />
-            <Route path={PATH.Projects} element={<Projects />} />
-            <Route path={PATH.Users} element={<Users />} />
-            <Route path={PATH.Profile} element={<Profile />} />
-            <Route path={PATH.Billing} element={<Billing />} />
+          <Route element={<PrivateRoutes />}>
+            <Route element={<MenuItems />}>
+              <Route path={PATH.Dashboard} element={<Dashboard />} />
+              <Route path={PATH.Instances} element={<Instances />} />
+              <Route path={PATH.CreateInstance} element={<CreateInstance />} />
+              <Route path={PATH.Keypairs} element={<Keypairs />} />
+              <Route path={PATH.Volumes} element={<Volumes />} />
+              <Route path={PATH.Networks} element={<Networks />} />
+              <Route path={PATH.SecurityGroups} element={<SecurityGroups />} />
+              <Route path={PATH.Projects} element={<Projects />} />
+              <Route path={PATH.Users} element={<Users />} />
+              <Route path={PATH.Profile} element={<Profile />} />
+              <Route path={PATH.Billing} element={<Billing />} />
+            </Route>
           </Route>
+          <Route path="*" element={<NotFoundPage />}></Route>
         </Routes>
       </BrowserRouter>
     </div>

@@ -6,6 +6,10 @@ var logger = require("morgan");
 var usersRouter = require("./routes/users");
 var authRouter = require("./routes/auth");
 var instanceRouter = require("./routes/instance");
+var networkRouter = require("./routes/network");
+var securityGroupRouter = require("./routes/securitygroup");
+var volumeRouter = require("./routes/volume");
+var projectRouter = require("./routes/project");
 const cors = require("cors");
 
 require("./config/db");
@@ -25,6 +29,10 @@ app.use(cors());
 app.use("/users", usersRouter);
 app.use("/auth", authRouter);
 app.use("/instance", instanceRouter);
+app.use("/network", networkRouter);
+app.use("/securitygroup", securityGroupRouter);
+app.use("/volume", volumeRouter);
+app.use("/project", projectRouter);
 
 // error handler
 app.use(function (err, req, res, next) {

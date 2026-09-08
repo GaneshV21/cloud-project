@@ -16,8 +16,7 @@ exports.listInstance = async function (req, res, next) {
 exports.createInstance = async function (req, res, next) {
   try {
     let { user_id } = req.params;
-    const { name, os, ip, network, keypair, status, cpu, ram, user_id } =
-      req.body;
+    const { name, os, ip, network, keypair, status, cpu, ram } = req.body;
     const instanceCreate = await Instance.create({
       user_id,
       name,

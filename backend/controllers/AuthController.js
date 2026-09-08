@@ -1,3 +1,4 @@
+const randomize = require("randomize");
 const User = require("../models/User");
 const {
   hashPassword,
@@ -15,6 +16,7 @@ exports.Signup = async function (req, res, next) {
         message: "User already Exist",
       });
     }
+    let user_id = randomize("00000");
     const newUser = await User.create({
       name,
       email,
@@ -47,7 +49,6 @@ exports.Login = async function (req, res, next) {
       });
     }
     let passwordCheck = await comparePassword(password, existUser?.password);
-    console.log("🚀 ~ passwordCheck:", passwordCheck);
     if (!passwordCheck) {
       return res.status(400).json({
         data: {},
@@ -68,7 +69,6 @@ exports.Login = async function (req, res, next) {
       message: "success",
     });
   } catch (err) {
-    console.log(err, "errrpr");
     next(err);
   }
 };

@@ -1,8 +1,9 @@
-import { ConfigProvider, Menu } from "antd";
+import { Button, ConfigProvider, Dropdown, Menu } from "antd";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import cloudIcon from "../../../assets/images/cloudIcon.png";
 import { FaUserCircle } from "react-icons/fa";
 import { IoChevronDown } from "react-icons/io5";
+import { DownOutlined, LogoutOutlined } from "@ant-design/icons";
 import {
   MdDashboard,
   MdOutlineFolderOpen,
@@ -13,6 +14,8 @@ import {
   MdOutlineReceiptLong,
 } from "react-icons/md";
 import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { clearToken } from "../../../redux/AuthSlice";
 const items = [
   {
     key: "cloudImage",
@@ -132,6 +135,33 @@ export const Menus = () => {
 };
 
 export const MenuItems = () => {
+  const Navigate = useNavigate();
+  const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
+  const handleMenuClick = (e) => {
+    if (e.key === "1") {
+      Navigate("/profile");
+    } else if (e.key === "2") {
+      dispatch(clearToken());
+      Navigate("/login");
+    }
+  };
+
+  const items = [
+    {
+      key: "1",
+      label: "Profile",
+    },
+    {
+      type: "divider",
+    },
+    {
+      key: "2",
+      label: "Logout",
+      icon: <LogoutOutlined />,
+      danger: true,
+    },
+  ];
   return (
     <div className="flex ">
       <div className="w-[20%] h-full">
@@ -139,18 +169,23 @@ export const MenuItems = () => {
       </div>
       <div className="flex flex-col w-[80%]">
         <div className="flex justify-end items-center p-2 border-b border-gray-200">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <FaUserCircle className="text-[40px] text-[#98A2B3]" />
+          <Dropdown
+            menu={{ items, onClick: handleMenuClick }}
+            trigger={["click"]}
+          >
+            <div className="flex items-center gap-3 cursor-pointer">
+              <FaUserCircle className="text-[40px] text-[#98A2B3]" />
 
-            <div className="flex flex-col leading-tight">
-              <span className="text-[16px] font-semibold text-[#101828]">
-                Ganesh V
-              </span>
-              <span className="text-[13px] text-[#667085]">Admin</span>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[16px] font-semibold text-[#101828]">
+                  {user?.name}
+                </span>
+                <span className="text-[13px] text-[#667085]">{user?.role}</span>
+              </div>
+
+              <IoChevronDown className="text-[#667085] text-[16px]" />
             </div>
-
-            <IoChevronDown className="text-[#667085] text-[16px]" />
-          </div>
+          </Dropdown>
         </div>
         <div className="px-8 py-4">
           <Outlet />

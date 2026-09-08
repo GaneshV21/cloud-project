@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import CustomTable from "../../../utils/custom-table";
 import SearchInput from "../../../utils/search-input";
 import { CustomButton } from "../../../utils/custom-input";
@@ -8,8 +8,10 @@ import { HiOutlineDotsVertical } from "react-icons/hi";
 import BreadCrumb from "../../../utils/bread-crumbs";
 import { getStatus } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
+import PATH from "../../../utils/Path";
 
 function Instances() {
+  const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
   const [path, setPath] = useState("");
   const [instanceDetail, setInstanceDetail] = useState({
@@ -192,8 +194,8 @@ function Instances() {
     setInstanceDetail({ data: {}, state: false });
   };
 
-  const createInstance = (e) => {
-    e.stopPropagation();
+  const createInstance = () => {
+    navigate(PATH.CreateInstance);
   };
 
   useEffect(() => {

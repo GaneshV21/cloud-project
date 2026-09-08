@@ -9,8 +9,11 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { LOGIN } from "../../../utils/api-endpoints";
+import { useDispatch } from "react-redux";
+import { setToken, setUser } from "../../../redux/AuthSlice";
 function Login() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [email, setEmail] = useState({ value: "", isError: false });
   const [password, setPassword] = useState({ value: "", isError: false });
   const [loading, setLoading] = useState(false);
@@ -36,6 +39,10 @@ function Login() {
       const data = await axios.post(LOGIN, payload);
       message.success(data?.data?.message);
       navigate("/dashboard");
+      localStorage.setItem("token", data?.data?.data?.token);
+      localStorage.setItem("user", JSON.stringify(data?.data?.data || {}));
+      dispatch(setToken(data?.data?.data?.token));
+      dispatch(setUser(data?.data?.data));
     } catch (error) {
       message.error(error?.message);
     } finally {

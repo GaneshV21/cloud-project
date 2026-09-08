@@ -9,6 +9,7 @@ const InstanceSchema = new mongoose.Schema({
   keypair: { type: String },
   network: { type: String },
   user_id: { type: String },
+  project_id: { type: String },
 });
 
 module.exports = mongoose.model("instance", InstanceSchema);
