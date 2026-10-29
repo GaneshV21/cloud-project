@@ -18,6 +18,7 @@ exports.Signup = async function (req, res, next) {
     }
     let user_id = randomize("00000");
     const newUser = await User.create({
+      user_id,
       name,
       email,
       password: await hashPassword(password),
