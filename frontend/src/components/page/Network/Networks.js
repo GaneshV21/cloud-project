@@ -5,7 +5,7 @@ import SearchInput from "../../../utils/search-input";
 import { CustomButton } from "../../../utils/custom-input";
 import { PlusOutlined } from "@ant-design/icons";
 import { HiOutlineDotsVertical } from "react-icons/hi";
-import BreadCrumb from "../../../utils/bread-crumbs";
+import PageHeader from "../../../utils/page-header";
 import { getStatus } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
 
@@ -70,7 +70,7 @@ function Networks() {
     {
       title: "Actions",
       key: "actions",
-      width: 50,
+      width: 60,
       render: () => (
         <HiOutlineDotsVertical className="text-gray-600 text-lg cursor-pointer" />
       ),
@@ -109,23 +109,18 @@ function Networks() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-2 ">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[24px] font-semibold text-[#101828]">
-            Networks
-          </h1>
-
-          <BreadCrumb pathname={path} />
-        </div>
-        <div className="flex items-center gap-2">
-          <SearchInput value={searchValue} setSearchValue={setSearchValue} />
-          <CustomButton
-            label="Create Network"
-            icon={<PlusOutlined />}
-            onClick={createNetwork}
-          />
-        </div>
-      </div>
+      <PageHeader
+        pathname={path}
+        title="Networks"
+        description="Create and manage private networks, subnets and gateways."
+      >
+        <SearchInput value={searchValue} setSearchValue={setSearchValue} />
+        <CustomButton
+          label="Create Network"
+          icon={<PlusOutlined />}
+          onClick={createNetwork}
+        />
+      </PageHeader>
       <div className="mt-5">
         <CustomTable columns={columns} dataSource={networkCopyData} bordered />
       </div>

@@ -10,8 +10,9 @@ const Keypairs = "/compute/keypairs";
 const Volumes = "/volumes";
 const Networks = "/network/networks";
 const SecurityGroups = "/network/security_groups";
-const Projects = "/projects";
-const Users = "/users";
+const Projects = "iam/projects";
+const Users = "iam/users";
+const Roles = "iam/roles";
 const Profile = "/profile";
 const Billing = "/billing";
 
@@ -27,6 +28,7 @@ const PATH = {
   SecurityGroups,
   Projects,
   Users,
+  Roles,
   Profile,
   Billing,
 };

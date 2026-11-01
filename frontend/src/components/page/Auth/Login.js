@@ -68,7 +68,6 @@ function Login() {
           </Typography>
           <CustomInput
             placeholder="Enter your email"
-            className="h-[44px]"
             name="email"
             value={email?.value}
             onChange={handleChange}
@@ -84,7 +83,6 @@ function Login() {
           </Typography>
           <CustomInputPassword
             placeholder="Enter your password"
-            className="h-[44px]"
             name="password"
             value={password?.value}
             onChange={handleChange}
@@ -103,7 +101,7 @@ function Login() {
 
           <CustomButton
             label={"Login"}
-            className="w-full h-[44px] rounded-lg bg-[#5142D4] text-white font-medium hover:bg-[#4338CA]"
+            className="w-full rounded-lg bg-[#5142D4] text-white font-medium hover:bg-[#4338CA]"
             disabled={
               !email?.value ||
               !password?.value ||

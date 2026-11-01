@@ -1,36 +1,24 @@
-import React, { useEffect, useState } from "react";
+import  { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import BreadCrumb from "../../../utils/bread-crumbs";
+import PageHeader from "../../../utils/page-header";
 import { CustomButton } from "../../../utils/custom-input";
 import {
   CloudServerOutlined,
   ClusterOutlined,
   DatabaseOutlined,
+  DeleteOutlined,
+  EditOutlined,
   MoreOutlined,
   PlusOutlined,
+  UserAddOutlined,
+  UserDeleteOutlined,
 } from "@ant-design/icons";
 import { Dropdown } from "antd";
-
-// Avatar colors taken from the app's theme palette
-const avatarColors = [
-  "#5142D4",
-  "#4338CA",
-  "#6366F1",
-  "#4F46E5",
-  "#7C3AED",
-  "#818CF8",
-  "#312E81",
-  "#F04438",
-];
-
-// Same project name always gets the same color, so it doesn't flicker on re-render
-const getAvatarColor = (name = "") => {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-};
+import { useDispatch } from "react-redux";
+import { getAvatarColor } from "../../../utils/common";
+import ProjectUsersModal from "./ProjectUsersModal";
+import ProjectModal from "./ProjectModal";
+import { renameProject } from "../../../redux/UsersSlice";
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -43,6 +31,7 @@ const formatDate = (date) => {
 function Projects() {
   const [path, setPath] = useState("");
   const location = useLocation();
+  const dispatch = useDispatch();
   const data = [
     {
       name: "Dev Project",
@@ -65,16 +54,63 @@ function Projects() {
   ];
   const [projectData, setProjectData] = useState([]);
   const [selectedProject, setSelectedProject] = useState(0);
+  const [usersModal, setUsersModal] = useState(null);
+  const [projectModal, setProjectModal] = useState(null);
 
   const createProject = (e) => {
     e.stopPropagation();
+    setProjectModal({ mode: "create", project: null });
+  };
+
+  const saveProject = (project) => {
+    if (projectModal.mode === "edit") {
+      const original = projectModal.project;
+      setProjectData((prev) => prev.map((p) => (p.name === original.name ? project : p)));
+      if (original.name !== project.name) {
+        dispatch(renameProject({ from: original.name, to: project.name }));
+      }
+    } else {
+      setProjectData((prev) => [
+        ...prev,
+        {
+          ...project,
+          createdAt: new Date().toISOString(),
+          status: "Active",
+          compute: 0,
+          network: 0,
+          volume: 0,
+        },
+      ]);
+    }
+    setProjectModal(null);
   };
 
   const menuItems = [
-    { key: "view", label: "View" },
-    { key: "edit", label: "Edit" },
-    { key: "delete", label: <span className="text-[#F04438]">Delete</span> },
+    { key: "assignUser", label: "Assign User", icon: <UserAddOutlined /> },
+    { key: "removeUser", label: "Remove User", icon: <UserDeleteOutlined /> },
+    { type: "divider" },
+    { key: "edit", label: "Edit", icon: <EditOutlined /> },
+    { type: "divider" },
+    { key: "delete", label: "Delete", icon: <DeleteOutlined />, danger: true },
   ];
+
+  const onAction = (key, record) => {
+    switch (key) {
+      case "assignUser":
+        setUsersModal({ mode: "assign", project: record });
+        break;
+      case "removeUser":
+        setUsersModal({ mode: "remove", project: record });
+        break;
+      case "edit":
+        setProjectModal({ mode: "edit", project: record });
+        break;
+      case "delete":
+        break;
+      default:
+        break;
+    }
+  };
 
   useEffect(() => {
     setProjectData(data);
@@ -87,22 +123,17 @@ function Projects() {
 
   return (
     <>
-      <BreadCrumb pathname={path} />
-      <div className="flex justify-between items-center mb-2 ">
-        <div className="flex flex-col gap-1">
-          <p className="text-[24px] leading-[38px] font-semibold text-[#181D27]">My Projects</p>
-          <p className="text-[#535862] text-[16px] leading-6">
-            Manage your projects and access resources, members and settings.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <CustomButton
-            label="Create Project"
-            icon={<PlusOutlined />}
-            onClick={createProject}
-          />
-        </div>
-      </div>
+      <PageHeader
+        pathname={path}
+        title="My Projects"
+        description="Manage your projects and access resources, members and settings."
+      >
+        <CustomButton
+          label="Create Project"
+          icon={<PlusOutlined />}
+          onClick={createProject}
+        />
+      </PageHeader>
 
       <div className="grid grid-cols-3 gap-5 mt-4">
         {projectData.map((item, index) => {
@@ -132,7 +163,17 @@ function Projects() {
                     Created: {formatDate(item.createdAt)}
                   </p>
                 </div>
-                <Dropdown menu={{ items: menuItems }} trigger={["click"]} placement="bottomLeft">
+                <Dropdown
+                  menu={{
+                    items: menuItems,
+                    onClick: ({ key, domEvent }) => {
+                      domEvent.stopPropagation();
+                      onAction(key, item);
+                    },
+                  }}
+                  trigger={["click"]}
+                  placement="bottomLeft"
+                >
                   <MoreOutlined
                     className="text-[18px] text-[#344054] p-1 rounded hover:bg-[#F2F4F7]"
                     onClick={(e) => e.stopPropagation()}
@@ -160,6 +201,26 @@ function Projects() {
           );
         })}
       </div>
+      {projectModal && (
+        <ProjectModal
+          open={!!projectModal}
+          mode={projectModal.mode}
+          project={projectModal.project}
+          existingNames={projectData
+            .filter((p) => p.name !== projectModal.project?.name)
+            .map((p) => p.name)}
+          onClose={() => setProjectModal(null)}
+          onSave={saveProject}
+        />
+      )}
+      {usersModal && (
+        <ProjectUsersModal
+          open={!!usersModal}
+          mode={usersModal.mode}
+          project={usersModal.project}
+          onClose={() => setUsersModal(null)}
+        />
+      )}
     </>
   );
 }

@@ -11,6 +11,7 @@ import Networks from "./components/page/Network/Networks";
 import SecurityGroups from "./components/page/Network/SecurityGroups";
 import Projects from "./components/page/Projects/Projects";
 import Users from "./components/page/Users/Users";
+import Roles from "./components/page/Roles/Roles";
 import Profile from "./components/page/Profile/Profile";
 import Billing from "./components/page/Billing/Billing";
 import PATH from "../src/utils/Path";
@@ -35,6 +36,7 @@ function App() {
               <Route path={PATH.SecurityGroups} element={<SecurityGroups />} />
               <Route path={PATH.Projects} element={<Projects />} />
               <Route path={PATH.Users} element={<Users />} />
+              <Route path={PATH.Roles} element={<Roles />} />
               <Route path={PATH.Profile} element={<Profile />} />
               <Route path={PATH.Billing} element={<Billing />} />
             </Route>

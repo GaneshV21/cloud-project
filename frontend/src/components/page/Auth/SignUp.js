@@ -66,7 +66,6 @@ const Signup = () => {
           </Typography>
           <CustomInput
             placeholder="Enter your full name"
-            className="h-[44px]"
             name="name"
             value={name?.value}
             onChange={handleChange}
@@ -83,7 +82,6 @@ const Signup = () => {
           </Typography>
           <CustomInput
             placeholder="Enter your email"
-            className="h-[44px]"
             name="email"
             value={email?.value}
             onChange={handleChange}
@@ -99,7 +97,6 @@ const Signup = () => {
           </Typography>
           <CustomInputPassword
             placeholder="Enter your password"
-            className="h-[44px]"
             name="password"
             value={password?.value}
             onChange={handleChange}
@@ -124,7 +121,7 @@ const Signup = () => {
 
           <CustomButton
             label={"Sign Up"}
-            className="w-full h-[44px] rounded-lg bg-[#5142D4] text-white font-medium hover:bg-[#4338CA]"
+            className="w-full rounded-lg bg-[#5142D4] text-white font-medium hover:bg-[#4338CA]"
             disabled={
               !name?.value ||
               !email?.value ||

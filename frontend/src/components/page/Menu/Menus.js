@@ -28,11 +28,6 @@ const items = [
     icon: <MdDashboard />,
   },
   {
-    key: "projects",
-    label: "Projects",
-    icon: <MdOutlineFolderOpen />,
-  },
-  {
     key: "compute",
     label: "Compute",
     icon: <MdMemory />,
@@ -76,6 +71,25 @@ const items = [
     key: "billing",
     label: "Billing",
     icon: <MdOutlineReceiptLong />,
+  },
+   {
+    key: "iam",
+    label: "IAM",
+    icon: <MdOutlineFolderOpen />,
+    children: [
+      {
+        key: "projects",
+        label: "Projects",
+      },
+      {
+        key: "users",
+        label: "Users",
+      },
+      {
+        key: "roles",
+        label: "Roles",
+      },
+    ],
   },
 ];
 
@@ -123,7 +137,7 @@ export const Menus = () => {
       <Menu
         onClick={onClick}
         onOpenChange={onOpenChange} // 3. ADD onOpenChange
-        style={{ width: "100%", height: "100vh" }}
+        style={{ width: "100%", borderInlineEnd: "none" }}
         mode="inline"
         items={items}
         selectedKeys={[selectedKey]}
@@ -163,12 +177,13 @@ export const MenuItems = () => {
     },
   ];
   return (
-    <div className="flex ">
-      <div className="w-[20%] h-full">
+    // Full-screen shell: sidebar stays fixed, only the page content on the right scrolls
+    <div className="flex h-screen overflow-hidden">
+      <div className="w-[20%] h-full overflow-y-auto bg-[#001529]">
         <Menus />
       </div>
-      <div className="flex flex-col w-[80%]">
-        <div className="flex justify-end items-center p-2 border-b border-gray-200">
+      <div className="flex flex-col w-[80%] h-full">
+        <div className="shrink-0 flex justify-end items-center p-2 border-b border-gray-200">
           <Dropdown
             menu={{ items, onClick: handleMenuClick }}
             trigger={["click"]}
@@ -187,7 +202,7 @@ export const MenuItems = () => {
             </div>
           </Dropdown>
         </div>
-        <div className="px-8 py-4">
+        <div className="flex-1 overflow-y-auto px-8 py-4">
           <Outlet />
         </div>
       </div>

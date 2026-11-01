@@ -1,5 +1,5 @@
 import { Typography } from "antd";
-import BreadCrumb from "../../utils/bread-crumbs";
+import PageHeader from "../../utils/page-header";
 import { useLocation } from "react-router-dom";
 import { CustomButton, CustomInput } from "../../utils/custom-input";
 
@@ -7,15 +7,11 @@ function CreateInstance() {
   const path = useLocation().pathname;
   return (
     <>
-      <div className="flex justify-between items-center mb-5 ">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[24px] font-semibold text-[#101828]">
-            Create Instance
-          </h1>
-
-          <BreadCrumb pathname={path} />
-        </div>
-      </div>
+      <PageHeader
+        pathname={path}
+        title="Create Instance"
+        description="Configure and launch a new compute instance."
+      />
       <div className="p-4">
         <div className="flex flex-col gap-2">
           <div className="flex gap-5 mb-4">
@@ -25,7 +21,6 @@ function CreateInstance() {
               </Typography>
               <CustomInput
                 placeHolder="Enter instance name"
-                className="h-[40px]"
               />
             </div>
             <div className="w-1/2">
@@ -34,7 +29,6 @@ function CreateInstance() {
               </Typography>
               <CustomInput
                 placeHolder="Enter instance name"
-                className="h-[40px]"
               />
             </div>
           </div>
@@ -45,7 +39,6 @@ function CreateInstance() {
               </Typography>
               <CustomInput
                 placeHolder="Enter instance name"
-                className="h-[40px]"
               />
             </div>
             <div className="w-1/2">
@@ -54,7 +47,6 @@ function CreateInstance() {
               </Typography>
               <CustomInput
                 placeHolder="Enter instance name"
-                className="h-[40px]"
               />
             </div>
           </div>
@@ -65,7 +57,6 @@ function CreateInstance() {
               </Typography>
               <CustomInput
                 placeHolder="Enter instance name"
-                className="h-[40px]"
               />
             </div>
             <div className="w-1/2">
@@ -74,7 +65,6 @@ function CreateInstance() {
               </Typography>
               <CustomInput
                 placeHolder="Enter instance name"
-                className="h-[40px]"
               />
             </div>
           </div>

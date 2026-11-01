@@ -8,6 +8,10 @@
   padding: 0;
 }
 
+body {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
 .bg-container {
   background-image: url('./assets/images/cloudImage.png');
   background-size: cover;
@@ -16,3 +20,13 @@
   opacity: 0.9;
 }
 
+
+/* CustomTable: only show the table's own scrollbar when rows actually overflow */
+.custom-table .ant-table-body {
+  overflow-y: auto !important;
+}
+
+/* CustomTable header cells */
+.custom-table .ant-table-thead > tr > th {
+  @apply text-sm text-gray-500 whitespace-nowrap;
+}

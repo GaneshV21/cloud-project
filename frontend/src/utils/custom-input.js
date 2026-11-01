@@ -1,5 +1,8 @@
-import { Button, Checkbox, ConfigProvider, Input } from "antd";
+import { Button, Checkbox, ConfigProvider, Input, Select } from "antd";
 import { forwardRef } from "react";
+
+// Height for every input box, dropdown and button in the app
+const CONTROL_HEIGHT = 40;
 
 export const CustomInput = forwardRef((props, ref) => {
   return (
@@ -7,6 +10,7 @@ export const CustomInput = forwardRef((props, ref) => {
       theme={{
         components: {
           Input: {
+            controlHeight: CONTROL_HEIGHT,
             colorBorder: "#D0D5DD",
             colorTextPlaceholder: "#667085",
             hoverBorderColor: "#667085",
@@ -35,6 +39,7 @@ export const CustomInputPassword = forwardRef((props, ref) => {
       theme={{
         components: {
           Input: {
+            controlHeight: CONTROL_HEIGHT,
             colorBorder: "#D0D5DD",
             colorTextPlaceholder: "#667085",
             hoverBorderColor: "#667085",
@@ -51,6 +56,31 @@ export const CustomInputPassword = forwardRef((props, ref) => {
       }}
     >
       <Input.Password ref={ref} {...props} />
+    </ConfigProvider>
+  );
+});
+
+export const CustomSelect = forwardRef((props, ref) => {
+  return (
+    <ConfigProvider
+      theme={{
+        components: {
+          Select: {
+            controlHeight: CONTROL_HEIGHT,
+            colorBorder: "#D0D5DD",
+            colorTextPlaceholder: "#667085",
+            hoverBorderColor: "#667085",
+            activeBorderColor: "#5142D4",
+            optionSelectedBg: "#EEF0FF",
+          },
+        },
+        token: {
+          borderRadius: 8,
+          colorPrimary: "#5142D4",
+        },
+      }}
+    >
+      <Select ref={ref} {...props} />
     </ConfigProvider>
   );
 });
@@ -76,6 +106,7 @@ export const CustomButton = ({
       theme={{
         components: {
           Button: {
+            controlHeight: CONTROL_HEIGHT,
             colorPrimary: "#5142D4",
             colorPrimaryHover: "#5142D4",
             colorPrimaryActive: "#4338CA",
@@ -94,6 +125,34 @@ export const CustomButton = ({
         className={className}
         {...rest}
       >
+        {label}
+      </Button>
+    </ConfigProvider>
+  );
+};
+
+// Outlined button for secondary actions like Cancel / Close
+export const CustomSecondaryButton = ({ label, onClick, icon, className = "", ...rest }) => {
+  return (
+    <ConfigProvider
+      wave={{ disabled: true }}
+      theme={{
+        components: {
+          Button: {
+            controlHeight: CONTROL_HEIGHT,
+            defaultBorderColor: "#D0D5DD",
+            defaultColor: "#344054",
+            defaultHoverBorderColor: "#5142D4",
+            defaultHoverColor: "#5142D4",
+            defaultActiveBorderColor: "#4338CA",
+            defaultActiveColor: "#4338CA",
+            contentFontSize: "16px",
+            fontWeight: 600,
+          },
+        },
+      }}
+    >
+      <Button onClick={onClick} icon={icon} className={className} {...rest}>
         {label}
       </Button>
     </ConfigProvider>

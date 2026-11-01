@@ -29,3 +29,24 @@ export function getStatus(item) {
     </span>
   );
 }
+
+// Avatar colors taken from the app's theme palette
+const avatarColors = [
+  "#5142D4",
+  "#4338CA",
+  "#6366F1",
+  "#4F46E5",
+  "#7C3AED",
+  "#818CF8",
+  "#312E81",
+  "#F04438",
+];
+
+// Same name always gets the same color, so it doesn't flicker on re-render
+export function getAvatarColor(name = "") {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
