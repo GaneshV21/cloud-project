@@ -16,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { clearToken } from "../../../redux/AuthSlice";
+import ProjectSwitcher from "./ProjectSwitcher";
 const items = [
   {
     key: "cloudImage",
@@ -183,7 +184,8 @@ export const MenuItems = () => {
         <Menus />
       </div>
       <div className="flex flex-col w-[80%] h-full">
-        <div className="shrink-0 flex justify-end items-center p-2 border-b border-gray-200">
+        <div className="shrink-0 flex justify-between items-center py-2 px-8 border-b border-gray-200">
+          <ProjectSwitcher />
           <Dropdown
             menu={{ items, onClick: handleMenuClick }}
             trigger={["click"]}

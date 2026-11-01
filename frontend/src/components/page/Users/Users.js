@@ -212,7 +212,17 @@ function Users() {
         />
       </PageHeader>
       <div className="mt-5">
-        <CustomTable columns={columns} dataSource={userCopyData} bordered />
+        <CustomTable
+          emptyTitle={searchValue ? "No matching users" : "No users"}
+          emptyDescription={
+            searchValue
+              ? `Nothing matches "${searchValue}". Try a different search.`
+              : "Add a user to give them access to your projects."
+          }
+          columns={columns}
+          dataSource={userCopyData}
+          bordered
+        />
       </div>
       {userDetail?.state && (
         <Drawer

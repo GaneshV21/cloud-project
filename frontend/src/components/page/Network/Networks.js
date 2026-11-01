@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { message } from "antd";
 import { useLocation } from "react-router-dom";
 import CustomTable from "../../../utils/custom-table";
 import SearchInput from "../../../utils/search-input";
@@ -6,8 +8,10 @@ import { CustomButton } from "../../../utils/custom-input";
 import { PlusOutlined } from "@ant-design/icons";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PageHeader from "../../../utils/page-header";
-import { getStatus } from "../../../utils/common";
+import { getStatus, toDetail } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
+import apiClient, { getErrorMessage } from "../../../utils/api-client";
+import { NETWORK_LIST } from "../../../utils/api-endpoints";
 
 function Networks() {
   const [searchValue, setSearchValue] = useState("");
@@ -17,19 +21,10 @@ function Networks() {
     state: false,
   });
   const location = useLocation();
-  const data = [
-    { name: "Network-01", cidr: "10.0.0.0/24", status: "Active", gatewayIp: "10.0.0.1" },
-    { name: "Network-02", cidr: "10.0.1.0/24", status: "Active", gatewayIp: "10.0.1.1" },
-    { name: "Network-03", cidr: "10.0.2.0/24", status: "Inactive", gatewayIp: "10.0.2.1" },
-    { name: "Network-04", cidr: "10.0.3.0/24", status: "Active", gatewayIp: "10.0.3.1" },
-    { name: "Network-05", cidr: "10.0.4.0/24", status: "Active", gatewayIp: "10.0.4.1" },
-    { name: "Network-06", cidr: "10.0.5.0/24", status: "Inactive", gatewayIp: "10.0.5.1" },
-    { name: "Network-07", cidr: "10.0.6.0/24", status: "Active", gatewayIp: "10.0.6.1" },
-    { name: "Network-08", cidr: "10.0.7.0/24", status: "Active", gatewayIp: "10.0.7.1" },
-    { name: "Network-09", cidr: "10.0.8.0/24", status: "Inactive", gatewayIp: "10.0.8.1" },
-    { name: "Network-10", cidr: "10.0.9.0/24", status: "Active", gatewayIp: "10.0.9.1" },
-    { name: "Network-11", cidr: "10.0.10.0/24", status: "Active", gatewayIp: "10.0.10.1" },
-  ];
+  const userId = useSelector((state) => state.auth.user?.user_id);
+  const currentProject = useSelector((state) => state.project.currentProject);
+  const projectId = currentProject?.project_id;
+  const [loading, setLoading] = useState(false);
   const [networkData, setNetworkData] = useState([]);
   const [networkCopyData, setNetworkCopyData] = useState([]);
 
@@ -41,7 +36,7 @@ function Networks() {
       render: (item, record) => (
         <p
           className="text-sm text-gray-900 underline cursor-pointer"
-          onClick={() => setNetworkDetail({ data: record, state: true })}
+          onClick={() => setNetworkDetail({ data: toDetail(record), state: true })}
         >
           {item}
         </p>
@@ -63,7 +58,7 @@ function Networks() {
     },
     {
       title: "Gateway IP",
-      dataIndex: "gatewayIp",
+      dataIndex: "gatewayip",
       key: "gatewayIp",
       render: (item) => <p className="text-sm text-gray-900">{item}</p>,
     },
@@ -85,23 +80,38 @@ function Networks() {
     e.stopPropagation();
   };
 
-  useEffect(() => {
-    setNetworkCopyData(
-      networkData?.filter((item) => {
-        return (
-          item.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.cidr.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.status.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.gatewayIp.toLowerCase().includes(searchValue.toLowerCase())
-        );
-      }),
-    );
-  }, [networkData, searchValue]);
+  // Networks of the project selected in the top bar
+  const fetchNetworks = useCallback(async () => {
+    if (!userId || !projectId) {
+      setNetworkData([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await apiClient.get(NETWORK_LIST(userId, projectId));
+      setNetworkData(res?.data?.data ?? []);
+    } catch (error) {
+      setNetworkData([]);
+      message.error(getErrorMessage(error, "Couldn't load networks."));
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, projectId]);
 
   useEffect(() => {
-    setNetworkData(data);
-    setNetworkCopyData(data);
-  }, []);
+    fetchNetworks();
+  }, [fetchNetworks]);
+
+  useEffect(() => {
+    const search = searchValue.toLowerCase();
+    setNetworkCopyData(
+      networkData?.filter((item) =>
+        [item.name, item.cidr, item.status, item.gatewayip].some((value) =>
+          (value ?? "").toLowerCase().includes(search)
+        )
+      ),
+    );
+  }, [networkData, searchValue]);
 
   useEffect(() => {
     setPath(location.pathname);
@@ -112,17 +122,34 @@ function Networks() {
       <PageHeader
         pathname={path}
         title="Networks"
-        description="Create and manage private networks, subnets and gateways."
+        description={
+          currentProject
+            ? `Create and manage private networks, subnets and gateways in ${currentProject.name}.`
+            : "Select a project in the top bar to see its networks."
+        }
       >
         <SearchInput value={searchValue} setSearchValue={setSearchValue} />
         <CustomButton
           label="Create Network"
           icon={<PlusOutlined />}
           onClick={createNetwork}
+          disabled={!projectId}
         />
       </PageHeader>
       <div className="mt-5">
-        <CustomTable columns={columns} dataSource={networkCopyData} bordered />
+        <CustomTable
+          emptyTitle={searchValue ? "No matching networks" : "No networks"}
+          emptyDescription={
+            searchValue
+              ? `Nothing matches "${searchValue}". Try a different search.`
+              : "Create a network to connect your instances."
+          }
+          columns={columns}
+          dataSource={networkCopyData}
+          loading={loading}
+          rowKey="_id"
+          bordered
+        />
       </div>
       {networkDetail?.state && (
         <Drawer

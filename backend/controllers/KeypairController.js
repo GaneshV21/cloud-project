@@ -1,9 +1,12 @@
 const Keypair = require("../models/Keypair");
+const { generateKeyPair } = require("../utils/jwt");
+const { findUserProject, projectNotFound } = require("../utils/project-access");
 
 exports.listKeypair = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
-    const keypairList = await Keypair.find({ user_id }, { _v: 0 });
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    const keypairList = await Keypair.find({ user_id, project_id }, { __v: 0 });
     res.status(200).json({
       data: keypairList,
       message: "Request Processed Successfully",
@@ -15,15 +18,22 @@ exports.listKeypair = async function (req, res, next) {
 
 exports.createKeypair = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
     const { name, type } = req.body;
-    const instanceCreate = await Keypair.create({
+    const { private_key, public_key, fingerprint } = generateKeyPair();
+    const keypairCreate = await Keypair.create({
+      user_id,
+      project_id,
       name,
       type,
+      public_key,
+      fingerprint,
     });
 
+    // The private key is only returned here, once; it is never stored
     res.status(200).json({
-      data: instanceCreate,
+      data: { ...keypairCreate.toJSON(), private_key },
       message: "Created Successfully",
     });
   } catch (error) {
@@ -31,18 +41,18 @@ exports.createKeypair = async function (req, res, next) {
   }
 };
 
-exports.getInstance = async function (req, res, next) {
+exports.getKeypair = async function (req, res, next) {
   try {
-    let { user_id, instance_id } = req.params;
-    const instanceGet = await Instance.findOne({ user_id, _id: instancr_id });
-    if (!instanceGet) {
+    let { user_id, keypair_id } = req.params;
+    const keypairGet = await Keypair.findOne({ user_id, _id: keypair_id }, { __v: 0 });
+    if (!keypairGet) {
       return res.status(404).json({
         data: {},
-        message: "Not Found",
+        message: "Keypair Not Found",
       });
     }
     res.status(200).json({
-      data: instanceGet,
+      data: keypairGet,
       message: "Request Processed Successfully",
     });
   } catch (error) {
@@ -50,15 +60,15 @@ exports.getInstance = async function (req, res, next) {
   }
 };
 
-exports.deleteInstance = async function (req, res, next) {
+exports.deleteKeypair = async function (req, res, next) {
   try {
-    let { user_id, instance_id } = req.params;
-    const instanceDelete = await Instance.deleteOne({
+    let { user_id, keypair_id } = req.params;
+    const keypairDelete = await Keypair.deleteOne({
       user_id,
-      _id: instance_id,
+      _id: keypair_id,
     });
     res.status(200).json({
-      data: instanceDelete,
+      data: keypairDelete,
       message: "Deleted Successfully",
     });
   } catch (error) {

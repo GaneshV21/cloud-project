@@ -13,9 +13,9 @@ export const CustomInput = forwardRef((props, ref) => {
             controlHeight: CONTROL_HEIGHT,
             colorBorder: "#D0D5DD",
             colorTextPlaceholder: "#667085",
-            hoverBorderColor: "#667085",
-            activeBorderColor: "#667085",
-            activeShadow: "0 0 0 2px #EAFAFA99",
+            hoverBorderColor: "#5142D4",
+            activeBorderColor: "#5142D4",
+            activeShadow: "0 0 0 3px #5142D41A",
           },
         },
         token: {
@@ -33,6 +33,30 @@ export const CustomInput = forwardRef((props, ref) => {
   );
 });
 
+export const CustomTextArea = forwardRef((props, ref) => {
+  return (
+    <ConfigProvider
+      theme={{
+        components: {
+          Input: {
+            colorBorder: "#D0D5DD",
+            colorTextPlaceholder: "#667085",
+            hoverBorderColor: "#5142D4",
+            activeBorderColor: "#5142D4",
+            activeShadow: "0 0 0 3px #5142D41A",
+          },
+        },
+        token: {
+          borderRadius: 8,
+          colorText: "#565D6D",
+        },
+      }}
+    >
+      <Input.TextArea ref={ref} {...props} />
+    </ConfigProvider>
+  );
+});
+
 export const CustomInputPassword = forwardRef((props, ref) => {
   return (
     <ConfigProvider
@@ -42,9 +66,9 @@ export const CustomInputPassword = forwardRef((props, ref) => {
             controlHeight: CONTROL_HEIGHT,
             colorBorder: "#D0D5DD",
             colorTextPlaceholder: "#667085",
-            hoverBorderColor: "#667085",
-            activeBorderColor: "#667085",
-            activeShadow: "0 0 0 2px #EAFAFA99",
+            hoverBorderColor: "#5142D4",
+            activeBorderColor: "#5142D4",
+            activeShadow: "0 0 0 3px #5142D41A",
           },
         },
         token: {
@@ -69,8 +93,9 @@ export const CustomSelect = forwardRef((props, ref) => {
             controlHeight: CONTROL_HEIGHT,
             colorBorder: "#D0D5DD",
             colorTextPlaceholder: "#667085",
-            hoverBorderColor: "#667085",
+            hoverBorderColor: "#5142D4",
             activeBorderColor: "#5142D4",
+            activeOutlineColor: "#5142D41A",
             optionSelectedBg: "#EEF0FF",
           },
         },

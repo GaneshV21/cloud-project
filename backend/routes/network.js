@@ -3,9 +3,13 @@ const router = express.Router();
 const NetworkController = require("../controllers/NetworkController");
 const { AuthMiddleWare } = require("../middlewares/AuthMiddleWare");
 
-router.get("/list/:user_id", AuthMiddleWare, NetworkController.listNetwork);
+router.get(
+  "/list/:user_id/:project_id",
+  AuthMiddleWare,
+  NetworkController.listNetwork,
+);
 router.post(
-  "/create/:user_id",
+  "/create/:user_id/:project_id",
   AuthMiddleWare,
   NetworkController.createNetwork,
 );

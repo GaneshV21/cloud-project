@@ -1,6 +1,11 @@
 import React, { useState } from "react";
-import { ConfigProvider, Input, Modal } from "antd";
-import { CustomButton, CustomInput, CustomSecondaryButton } from "../../../utils/custom-input";
+import { ConfigProvider, Modal } from "antd";
+import {
+  CustomButton,
+  CustomInput,
+  CustomSecondaryButton,
+  CustomTextArea,
+} from "../../../utils/custom-input";
 
 const MAX_DESCRIPTION = 200;
 
@@ -9,14 +14,21 @@ function ProjectModal({ open, mode, project, existingNames = [], onClose, onSave
   const [name, setName] = useState(project?.name ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (saving) return;
     const trimmed = name.trim();
     if (!trimmed) return setError("Project name is required.");
     if (existingNames.some((n) => n.toLowerCase() === trimmed.toLowerCase())) {
       return setError("A project with this name already exists.");
     }
-    onSave({ ...project, name: trimmed, description: description.trim() });
+    setSaving(true);
+    try {
+      await onSave({ ...project, name: trimmed, description: description.trim() });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -41,10 +53,11 @@ function ProjectModal({ open, mode, project, existingNames = [], onClose, onSave
         }
         footer={
           <div className="flex justify-end gap-2">
-            <CustomSecondaryButton label="Cancel" onClick={onClose} />
+            <CustomSecondaryButton label="Cancel" onClick={onClose} disabled={saving} />
             <CustomButton
               label={isEdit ? "Save Changes" : "Create Project"}
               onClick={handleSave}
+              loading={saving}
             />
           </div>
         }
@@ -70,7 +83,7 @@ function ProjectModal({ open, mode, project, existingNames = [], onClose, onSave
           </div>
           <div>
             <p className="text-[13px] font-medium text-[#344054] mb-1">Description</p>
-            <Input.TextArea
+            <CustomTextArea
               rows={3}
               placeholder="What is this project for?"
               maxLength={MAX_DESCRIPTION}

@@ -1,12 +1,13 @@
 const { verifyToken } = require("../utils/jwt");
 const AuthMiddleWare = (req, res, next) => {
-  let token = req.headers["X-Auth-Header"];
+  // Node lowercases incoming header names
+  let token = req.headers["x-auth-header"];
   let user_id = req.params.user_id;
   if (!token) {
     return next({ status: 401, message: "UnAuthourized User" });
   }
   let verify = verifyToken(token);
-  let payload = verify?.payload;
+  let payload = verify?.decoded;
   if (!verify.valid || payload?.user_id !== user_id) {
     return next({
       status: 401,

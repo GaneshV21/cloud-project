@@ -1,9 +1,19 @@
 const Project = require("../models/Project");
+const { generateId, createWithUniqueId } = require("../utils/generate-id");
 
 exports.listProject = async function (req, res, next) {
   try {
     let { user_id } = req.params;
     const projectList = await Project.find({ user_id });
+    // Projects created before project_id existed get one the first time they're listed
+    await Promise.all(
+      projectList
+        .filter((project) => !project.project_id)
+        .map((project) => {
+          project.project_id = generateId();
+          return project.save();
+        }),
+    );
     res.status(200).json({
       data: projectList,
       message: "Request Processed Successfully",
@@ -17,11 +27,14 @@ exports.createProject = async function (req, res, next) {
   try {
     let { user_id } = req.params;
     const { name, description } = req.body;
-    const projectCreate = await Project.create({
-      user_id,
-      name,
-      description,
-    });
+    const projectCreate = await createWithUniqueId((project_id) =>
+      Project.create({
+        project_id,
+        user_id,
+        name,
+        description,
+      }),
+    );
     res.status(200).json({
       data: projectCreate,
       message: "Created Successfully",
@@ -34,7 +47,7 @@ exports.createProject = async function (req, res, next) {
 exports.getProject = async function (req, res, next) {
   try {
     let { user_id, project_id } = req.params;
-    const projectGet = await Project.findOne({ user_id, _id: project_id });
+    const projectGet = await Project.findOne({ user_id, project_id });
     if (!projectGet) {
       return res.status(404).json({
         data: {},
@@ -55,7 +68,7 @@ exports.updateProject = async function (req, res, next) {
     let { user_id, project_id } = req.params;
     const { name, description } = req.body;
     const projectUpdate = await Project.findOneAndUpdate(
-      { user_id, _id: project_id },
+      { user_id, project_id },
       { name, description },
       { new: true },
     );
@@ -79,7 +92,7 @@ exports.deleteProject = async function (req, res, next) {
     let { user_id, project_id } = req.params;
     const projectDelete = await Project.deleteOne({
       user_id,
-      _id: project_id,
+      project_id,
     });
     res.status(200).json({
       data: projectDelete,

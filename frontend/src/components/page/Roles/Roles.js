@@ -241,6 +241,12 @@ function Roles() {
       </PageHeader>
       <div className="mt-5">
         <CustomTable
+          emptyTitle={searchValue ? "No matching roles" : "No roles"}
+          emptyDescription={
+            searchValue
+              ? `Nothing matches "${searchValue}". Try a different search.`
+              : "Create a role to control what users can do."
+          }
           columns={columns}
           dataSource={roleCopyData.map((role) => ({ ...role, key: role.id }))}
           bordered

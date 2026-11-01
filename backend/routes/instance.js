@@ -3,9 +3,13 @@ const router = express.Router();
 const InstanceController = require("../controllers/InstanceController");
 const { AuthMiddleWare } = require("../middlewares/AuthMiddleWare");
 
-router.get("/list/:user_id", AuthMiddleWare, InstanceController.listInstance);
+router.get(
+  "/list/:user_id/:project_id",
+  AuthMiddleWare,
+  InstanceController.listInstance,
+);
 router.post(
-  "/create/:user_id",
+  "/create/:user_id/:project_id",
   AuthMiddleWare,
   InstanceController.createInstance,
 );

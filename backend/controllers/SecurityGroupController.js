@@ -1,11 +1,11 @@
 const SecurityGroup = require("../models/SecurityGroup");
+const { findUserProject, projectNotFound } = require("../utils/project-access");
 
 exports.listSecurityGroup = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
-    const securityGroupList = await SecurityGroup.find(
-      { user_id },
-    );
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    const securityGroupList = await SecurityGroup.find({ user_id, project_id });
     res.status(200).json({
       data: securityGroupList,
       message: "Request Processed Successfully",
@@ -17,8 +17,9 @@ exports.listSecurityGroup = async function (req, res, next) {
 
 exports.createSecurityGroup = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
-    const { name, rules, description, project_id } = req.body;
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    const { name, rules, description } = req.body;
     const securityGroupCreate = await SecurityGroup.create({
       user_id,
       name,
@@ -60,10 +61,10 @@ exports.getSecurityGroup = async function (req, res, next) {
 exports.updateSecurityGroup = async function (req, res, next) {
   try {
     let { user_id, securitygroup_id } = req.params;
-    const { name, rules, description, project_id } = req.body;
+    const { name, rules, description } = req.body;
     const securityGroupUpdate = await SecurityGroup.findOneAndUpdate(
       { user_id, _id: securitygroup_id },
-      { name, rules, description, project_id },
+      { name, rules, description },
       { new: true },
     );
     if (!securityGroupUpdate) {

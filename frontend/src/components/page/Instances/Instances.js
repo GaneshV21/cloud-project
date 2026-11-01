@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { message } from "antd";
 import { useLocation, useNavigate } from "react-router-dom";
 import CustomTable from "../../../utils/custom-table";
 import SearchInput from "../../../utils/search-input";
@@ -6,9 +8,11 @@ import { CustomButton } from "../../../utils/custom-input";
 import { PlusOutlined } from "@ant-design/icons";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PageHeader from "../../../utils/page-header";
-import { getStatus } from "../../../utils/common";
+import { getStatus, toDetail } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
 import PATH from "../../../utils/Path";
+import apiClient, { getErrorMessage } from "../../../utils/api-client";
+import { INSTANCE_LIST } from "../../../utils/api-endpoints";
 
 function Instances() {
   const navigate = useNavigate();
@@ -19,118 +23,10 @@ function Instances() {
     state: false,
   });
   const location = useLocation();
-  const data = [
-    {
-      name: "Instance 1",
-      status: "Running",
-      ip: "192.168.1.1",
-      cpu: "2",
-      ram: "4 GB",
-      os: "Ubuntu 22.04",
-      keypair: "Keypair-01",
-      network: "Network-01",
-    },
-    {
-      name: "Instance 2",
-      status: "Running",
-      ip: "192.168.1.2",
-      cpu: "3",
-      ram: "8 GB",
-      os: "Ubuntu 22.04",
-      keypair: "Keypair-02",
-      network: "Network-01",
-    },
-    {
-      name: "Instance 3",
-      status: "Stopped",
-      ip: "192.168.1.3",
-      cpu: "4",
-      ram: "16 GB",
-      os: "Centos",
-      keypair: "Keypair-03",
-      network: "Network-02",
-    },
-    {
-      name: "Instance 4",
-      status: "Running",
-      ip: "192.168.1.4",
-      cpu: "1",
-      ram: "4 GB",
-      os: "Windows 2021",
-      keypair: "Keypair-04",
-      network: "Network-02",
-    },
-    {
-      name: "Instance 5",
-      status: "Running",
-      ip: "192.168.1.5",
-      cpu: "3",
-      ram: "8 GB",
-      os: "Windows 2021",
-      keypair: "Keypair-05",
-      network: "Network-03",
-    },
-    {
-      name: "Instance 6",
-      status: "Stopped",
-      ip: "192.168.1.6",
-      cpu: "4",
-      ram: "16 GB",
-      os: "Ubuntu 20.04",
-      keypair: "Keypair-06",
-      network: "Network-03",
-    },
-    {
-      name: "Instance 7",
-      status: "Running",
-      ip: "192.168.1.7",
-      cpu: "1",
-      ram: "4 GB",
-      os: "Ubuntu 20.04",
-      keypair: "Keypair-07",
-      network: "Network-04",
-    },
-    {
-      name: "Instance 8",
-      status: "Running",
-      ip: "192.168.1.8",
-      cpu: "3",
-      ram: "8 GB",
-      os: "Centos",
-      keypair: "Keypair-08",
-      network: "Network-04",
-    },
-    {
-      name: "Instance 9",
-      status: "Stopped",
-      ip: "192.168.1.9",
-      cpu: "4",
-      ram: "16 GB",
-      os: "Ubuntu 20.04",
-      keypair: "Keypair-09",
-      network: "Network-05",
-    },
-    {
-      name: "Instance 10",
-      status: "Running",
-      ip: "192.168.1.10",
-      cpu: "1",
-      ram: "4 GB",
-      os: "Ubuntu 20.04",
-      keypair: "Keypair-10",
-      network: "Network-05",
-    },
-    {
-      name: "Instance 11",
-      status: "Running",
-      ip: "192.168.1.11",
-      cpu: "3",
-      ram: "8 GB",
-      os: "Windows 2008",
-      keypair: "Keypair-11",
-      network: "Network-06",
-    },
-  ];
+  const userId = useSelector((state) => state.auth.user?.user_id);
+  const currentProject = useSelector((state) => state.project.currentProject);
+  const projectId = currentProject?.project_id;
+  const [loading, setLoading] = useState(false);
   const [instanceData, setInstanceData] = useState([]);
   const [instanceCopyData, setInstanceCopyData] = useState([]);
 
@@ -142,7 +38,7 @@ function Instances() {
       render: (item, record) => (
         <p
           className="text-sm text-gray-900 underline cursor-pointer"
-          onClick={() => setInstanceDetail({ data: record, state: true })}
+          onClick={() => setInstanceDetail({ data: toDetail(record), state: true })}
         >
           {item}
         </p>
@@ -198,22 +94,38 @@ function Instances() {
     navigate(PATH.CreateInstance);
   };
 
-  useEffect(() => {
-    setInstanceCopyData(
-      instanceData?.filter((item) => {
-        return (
-          item.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.status.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.ip.toLowerCase().includes(searchValue.toLowerCase())
-        );
-      }),
-    );
-  }, [instanceData, searchValue]);
+  // Instances of the project selected in the top bar
+  const fetchInstances = useCallback(async () => {
+    if (!userId || !projectId) {
+      setInstanceData([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await apiClient.get(INSTANCE_LIST(userId, projectId));
+      setInstanceData(res?.data?.data ?? []);
+    } catch (error) {
+      setInstanceData([]);
+      message.error(getErrorMessage(error, "Couldn't load instances."));
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, projectId]);
 
   useEffect(() => {
-    setInstanceData(data);
-    setInstanceCopyData(data);
-  }, []);
+    fetchInstances();
+  }, [fetchInstances]);
+
+  useEffect(() => {
+    const search = searchValue.toLowerCase();
+    setInstanceCopyData(
+      instanceData?.filter((item) =>
+        [item.name, item.status, item.ip].some((value) =>
+          (value ?? "").toLowerCase().includes(search)
+        )
+      ),
+    );
+  }, [instanceData, searchValue]);
 
   useEffect(() => {
     setPath(location.pathname);
@@ -224,17 +136,34 @@ function Instances() {
       <PageHeader
         pathname={path}
         title="Instances"
-        description="Launch, monitor and manage your compute instances."
+        description={
+          currentProject
+            ? `Launch, monitor and manage compute instances in ${currentProject.name}.`
+            : "Select a project in the top bar to see its instances."
+        }
       >
         <SearchInput value={searchValue} setSearchValue={setSearchValue} />
         <CustomButton
           label="Create Instance"
           icon={<PlusOutlined />}
           onClick={createInstance}
+          disabled={!projectId}
         />
       </PageHeader>
       <div className="mt-5">
-        <CustomTable columns={columns} dataSource={instanceCopyData} bordered />
+        <CustomTable
+          emptyTitle={searchValue ? "No matching instances" : "No instances"}
+          emptyDescription={
+            searchValue
+              ? `Nothing matches "${searchValue}". Try a different search.`
+              : "Create an instance to get started."
+          }
+          columns={columns}
+          dataSource={instanceCopyData}
+          loading={loading}
+          rowKey="_id"
+          bordered
+        />
       </div>
       {instanceDetail?.state && (
         <Drawer

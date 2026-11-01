@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { message } from "antd";
 import { useLocation } from "react-router-dom";
 import CustomTable from "../../../utils/custom-table";
 import SearchInput from "../../../utils/search-input";
@@ -6,7 +8,10 @@ import { CustomButton } from "../../../utils/custom-input";
 import { PlusOutlined } from "@ant-design/icons";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PageHeader from "../../../utils/page-header";
+import { toDetail } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
+import apiClient, { getErrorMessage } from "../../../utils/api-client";
+import { KEYPAIR_LIST } from "../../../utils/api-endpoints";
 
 function Keypairs() {
   const [searchValue, setSearchValue] = useState("");
@@ -16,74 +21,10 @@ function Keypairs() {
     state: false,
   });
   const location = useLocation();
-  const data = [
-    {
-      name: "Keypair-01",
-      type: "ssh",
-      fingerprint: "SHA256:1a2b3c4d5e6f7g8h9i0jklmnopqrstuv",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC01 keypair-01",
-    },
-    {
-      name: "Keypair-02",
-      type: "ssh",
-      fingerprint: "SHA256:2b3c4d5e6f7g8h9i0j1klmnopqrstuvw",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC02 keypair-02",
-    },
-    {
-      name: "Keypair-03",
-      type: "rsa",
-      fingerprint: "SHA256:3c4d5e6f7g8h9i0j1k2lmnopqrstuvwx",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC03 keypair-03",
-    },
-    {
-      name: "Keypair-04",
-      type: "ssh",
-      fingerprint: "SHA256:4d5e6f7g8h9i0j1k2l3mnopqrstuvwxy",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC04 keypair-04",
-    },
-    {
-      name: "Keypair-05",
-      type: "ed25519",
-      fingerprint: "SHA256:5e6f7g8h9i0j1k2l3m4nopqrstuvwxyz",
-      publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI05 keypair-05",
-    },
-    {
-      name: "Keypair-06",
-      type: "ssh",
-      fingerprint: "SHA256:6f7g8h9i0j1k2l3m4n5opqrstuvwxyza",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC06 keypair-06",
-    },
-    {
-      name: "Keypair-07",
-      type: "rsa",
-      fingerprint: "SHA256:7g8h9i0j1k2l3m4n5o6pqrstuvwxyzab",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC07 keypair-07",
-    },
-    {
-      name: "Keypair-08",
-      type: "ssh",
-      fingerprint: "SHA256:8h9i0j1k2l3m4n5o6p7qrstuvwxyzabc",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC08 keypair-08",
-    },
-    {
-      name: "Keypair-09",
-      type: "ssh",
-      fingerprint: "SHA256:9i0j1k2l3m4n5o6p7q8rstuvwxyzabcd",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC09 keypair-09",
-    },
-    {
-      name: "Keypair-10",
-      type: "ed25519",
-      fingerprint: "SHA256:0j1k2l3m4n5o6p7q8r9stuvwxyzabcde",
-      publicKey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI10 keypair-10",
-    },
-    {
-      name: "Keypair-11",
-      type: "rsa",
-      fingerprint: "SHA256:1k2l3m4n5o6p7q8r9s0tuvwxyzabcdef",
-      publicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC11 keypair-11",
-    },
-  ];
+  const userId = useSelector((state) => state.auth.user?.user_id);
+  const currentProject = useSelector((state) => state.project.currentProject);
+  const projectId = currentProject?.project_id;
+  const [loading, setLoading] = useState(false);
   const [keypairData, setKeypairData] = useState([]);
   const [keypairCopyData, setKeypairCopyData] = useState([]);
 
@@ -95,7 +36,7 @@ function Keypairs() {
       render: (item, record) => (
         <p
           className="text-sm text-gray-900 underline cursor-pointer"
-          onClick={() => setKeypairDetail({ data: record, state: true })}
+          onClick={() => setKeypairDetail({ data: toDetail(record), state: true })}
         >
           {item}
         </p>
@@ -125,21 +66,38 @@ function Keypairs() {
     e.stopPropagation();
   };
 
-  useEffect(() => {
-    setKeypairCopyData(
-      keypairData?.filter((item) => {
-        return (
-          item.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.type.toLowerCase().includes(searchValue.toLowerCase())
-        );
-      }),
-    );
-  }, [keypairData, searchValue]);
+  // Keypairs of the project selected in the top bar
+  const fetchKeypairs = useCallback(async () => {
+    if (!userId || !projectId) {
+      setKeypairData([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await apiClient.get(KEYPAIR_LIST(userId, projectId));
+      setKeypairData(res?.data?.data ?? []);
+    } catch (error) {
+      setKeypairData([]);
+      message.error(getErrorMessage(error, "Couldn't load keypairs."));
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, projectId]);
 
   useEffect(() => {
-    setKeypairData(data);
-    setKeypairCopyData(data);
-  }, []);
+    fetchKeypairs();
+  }, [fetchKeypairs]);
+
+  useEffect(() => {
+    const search = searchValue.toLowerCase();
+    setKeypairCopyData(
+      keypairData?.filter((item) =>
+        [item.name, item.type].some((value) =>
+          (value ?? "").toLowerCase().includes(search)
+        )
+      ),
+    );
+  }, [keypairData, searchValue]);
 
   useEffect(() => {
     setPath(location.pathname);
@@ -150,17 +108,34 @@ function Keypairs() {
       <PageHeader
         pathname={path}
         title="Keypairs"
-        description="Create and manage SSH keypairs used to access your instances."
+        description={
+          currentProject
+            ? `Create and manage SSH keypairs used to access instances in ${currentProject.name}.`
+            : "Select a project in the top bar to see its keypairs."
+        }
       >
         <SearchInput value={searchValue} setSearchValue={setSearchValue} />
         <CustomButton
           label="Create Keypair"
           icon={<PlusOutlined />}
           onClick={createKeypair}
+          disabled={!projectId}
         />
       </PageHeader>
       <div className="mt-5">
-        <CustomTable columns={columns} dataSource={keypairCopyData} bordered />
+        <CustomTable
+          emptyTitle={searchValue ? "No matching keypairs" : "No keypairs"}
+          emptyDescription={
+            searchValue
+              ? `Nothing matches "${searchValue}". Try a different search.`
+              : "Create a keypair to access your instances."
+          }
+          columns={columns}
+          dataSource={keypairCopyData}
+          loading={loading}
+          rowKey="_id"
+          bordered
+        />
       </div>
       {keypairDetail?.state && (
         <Drawer

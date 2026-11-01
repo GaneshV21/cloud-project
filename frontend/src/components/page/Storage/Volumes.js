@@ -128,7 +128,17 @@ function Volumes() {
         />
       </PageHeader>
       <div className="mt-5">
-        <CustomTable columns={columns} dataSource={volumeCopyData} bordered />
+        <CustomTable
+          emptyTitle={searchValue ? "No matching volumes" : "No volumes"}
+          emptyDescription={
+            searchValue
+              ? `Nothing matches "${searchValue}". Try a different search.`
+              : "Create a volume to add storage."
+          }
+          columns={columns}
+          dataSource={volumeCopyData}
+          bordered
+        />
       </div>
       {volumeDetail?.state && (
         <Drawer

@@ -50,3 +50,23 @@ export function getAvatarColor(name = "") {
   }
   return avatarColors[Math.abs(hash) % avatarColors.length];
 }
+
+// Backend bookkeeping fields that shouldn't show in detail drawers
+const HIDDEN_DETAIL_FIELDS = ["_id", "__v", "user_id", "project_id"];
+
+const formatDetailValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((v) => (typeof v === "object" ? JSON.stringify(v) : v)).join(", ") || "-";
+  }
+  if (value && typeof value === "object") return JSON.stringify(value);
+  return value;
+};
+
+// API record -> what the detail drawer shows (no internal ids, arrays as readable text)
+export function toDetail(record = {}) {
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([key]) => !HIDDEN_DETAIL_FIELDS.includes(key))
+      .map(([key, value]) => [key, formatDetailValue(value)])
+  );
+}

@@ -1,9 +1,11 @@
 const Instance = require("../models/Instance");
+const { findUserProject, projectNotFound } = require("../utils/project-access");
 
 exports.listInstance = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
-    const instanceList = await Instance.find({ user_id }, { _v: 0 });
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    const instanceList = await Instance.find({ user_id, project_id });
     res.status(200).json({
       data: instanceList,
       message: "Request Processed Successfully",
@@ -15,10 +17,12 @@ exports.listInstance = async function (req, res, next) {
 
 exports.createInstance = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
     const { name, os, ip, network, keypair, status, cpu, ram } = req.body;
     const instanceCreate = await Instance.create({
       user_id,
+      project_id,
       name,
       os,
       ip,
@@ -40,7 +44,7 @@ exports.createInstance = async function (req, res, next) {
 exports.getInstance = async function (req, res, next) {
   try {
     let { user_id, instance_id } = req.params;
-    const instanceGet = await Instance.findOne({ user_id, _id: instancr_id });
+    const instanceGet = await Instance.findOne({ user_id, _id: instance_id });
     if (!instanceGet) {
       return res.status(404).json({
         data: {},

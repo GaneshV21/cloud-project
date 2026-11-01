@@ -4,12 +4,12 @@ const SecurityGroupController = require("../controllers/SecurityGroupController"
 const { AuthMiddleWare } = require("../middlewares/AuthMiddleWare");
 
 router.get(
-  "/list/:user_id",
+  "/list/:user_id/:project_id",
   AuthMiddleWare,
   SecurityGroupController.listSecurityGroup,
 );
 router.post(
-  "/create/:user_id",
+  "/create/:user_id/:project_id",
   AuthMiddleWare,
   SecurityGroupController.createSecurityGroup,
 );

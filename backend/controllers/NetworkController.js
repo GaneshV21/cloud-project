@@ -1,9 +1,11 @@
 const Network = require("../models/Network");
+const { findUserProject, projectNotFound } = require("../utils/project-access");
 
 exports.listNetwork = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
-    const networkList = await Network.find({ user_id });
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    const networkList = await Network.find({ user_id, project_id });
     res.status(200).json({
       data: networkList,
       message: "Request Processed Successfully",
@@ -15,8 +17,9 @@ exports.listNetwork = async function (req, res, next) {
 
 exports.createNetwork = async function (req, res, next) {
   try {
-    let { user_id } = req.params;
-    const { name, cidr, status, gatewayip, project_id } = req.body;
+    let { user_id, project_id } = req.params;
+    if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    const { name, cidr, status, gatewayip } = req.body;
     const networkCreate = await Network.create({
       user_id,
       name,
@@ -56,10 +59,10 @@ exports.getNetwork = async function (req, res, next) {
 exports.updateNetwork = async function (req, res, next) {
   try {
     let { user_id, network_id } = req.params;
-    const { name, cidr, status, gatewayip, project_id } = req.body;
+    const { name, cidr, status, gatewayip } = req.body;
     const networkUpdate = await Network.findOneAndUpdate(
       { user_id, _id: network_id },
-      { name, cidr, status, gatewayip, project_id },
+      { name, cidr, status, gatewayip },
       { new: true },
     );
     if (!networkUpdate) {

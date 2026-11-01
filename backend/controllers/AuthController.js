@@ -1,10 +1,10 @@
-const randomize = require("randomize");
 const User = require("../models/User");
 const {
   hashPassword,
   comparePassword,
   generateToken,
 } = require("../utils/jwt");
+const { createWithUniqueId } = require("../utils/generate-id");
 
 exports.Signup = async function (req, res, next) {
   try {
@@ -16,13 +16,15 @@ exports.Signup = async function (req, res, next) {
         message: "User already Exist",
       });
     }
-    let user_id = randomize("00000");
-    const newUser = await User.create({
-      user_id,
-      name,
-      email,
-      password: await hashPassword(password),
-    });
+    const hashedPassword = await hashPassword(password);
+    const newUser = await createWithUniqueId((user_id) =>
+      User.create({
+        user_id,
+        name,
+        email,
+        password: hashedPassword,
+      }),
+    );
     const userData = newUser.toJSON();
     sanitizeUser(userData);
 
@@ -59,6 +61,7 @@ exports.Login = async function (req, res, next) {
 
     let token = generateToken({
       id: existUser._id,
+      user_id: existUser.user_id,
       name: existUser?.name,
       email: existUser?.email,
     });

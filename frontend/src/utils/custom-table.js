@@ -2,8 +2,20 @@ import { ConfigProvider, Table } from "antd";
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { IoIosArrowBack } from "react-icons/io";
 import { IoIosArrowForward } from "react-icons/io";
+import { InboxOutlined } from "@ant-design/icons";
 
 const WINDOW_SIZE = 5;
+
+// Shown in place of rows when the table has no data
+const EmptyState = ({ title, description }) => (
+  <div className="flex flex-col items-center gap-2 py-10">
+    <div className="h-14 w-14 rounded-2xl bg-[#EEF0FF] flex items-center justify-center">
+      <InboxOutlined className="text-[26px] text-[#5142D4]" />
+    </div>
+    <p className="text-sm font-semibold text-[#101828]">{title}</p>
+    <p className="text-sm text-gray-500">{description}</p>
+  </div>
+);
 // Used only until a real row has been rendered and measured
 const DEFAULT_ROW_HEIGHT = 49;
 
@@ -77,7 +89,13 @@ export function Footer({ total = 0, pageSize, page, onChange }) {
   );
 }
 
-function CustomTable({ dataSource = [], ...props }) {
+// emptyTitle / emptyDescription: what to show when there are no rows, e.g. "No instances"
+function CustomTable({
+  dataSource = [],
+  emptyTitle = "No data found",
+  emptyDescription = "There's nothing to show here yet.",
+  ...props
+}) {
   const wrapperRef = useRef(null);
   const containerRef = useRef(null);
   // Tallest row seen for the current data, so the page size doesn't flip back and forth
@@ -182,6 +200,10 @@ function CustomTable({ dataSource = [], ...props }) {
           {...props}
           dataSource={PaginationData}
           pagination={false}
+          locale={{
+            emptyText: <EmptyState title={emptyTitle} description={emptyDescription} />,
+            ...props.locale,
+          }}
           // If a row is taller than expected, scroll inside the table instead of the page
           scroll={bodyHeight ? { ...props.scroll, y: bodyHeight } : props.scroll}
           footer={() => (
