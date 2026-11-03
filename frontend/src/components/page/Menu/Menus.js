@@ -112,9 +112,13 @@ export const Menus = () => {
   useEffect(() => {
     const pathSegments = location.pathname.split("/").filter(Boolean);
 
-    setSelectedKey(pathSegments[pathSegments.length - 1] || "");
+    // Deepest segment that is a menu item, so sub-pages like
+    // /network/security_groups/<id>/rules keep "Security Groups" highlighted
+    const menuKeys = items.flatMap((item) => [item.key, ...(item.children ?? []).map((c) => c.key)]);
+    const index = pathSegments.findLastIndex((segment) => menuKeys.includes(segment));
+    setSelectedKey(index === -1 ? "" : pathSegments[index]);
 
-    const parentKeys = pathSegments.slice(0, -1);
+    const parentKeys = pathSegments.slice(0, Math.max(index, 0));
     setOpenKeys(parentKeys);
   }, [location.pathname]);
 

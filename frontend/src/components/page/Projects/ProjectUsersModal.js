@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { ConfigProvider, Modal } from "antd";
+import React, { useEffect, useState } from "react";
+import { ConfigProvider, message, Modal } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { CustomButton, CustomSelect, CustomSecondaryButton } from "../../../utils/custom-input";
 import { getAvatarColor } from "../../../utils/common";
 import { RoleSelect } from "../Users/ProjectAccessDrawer";
-import { assignUsersToProject, removeUsersFromProject } from "../../../redux/UsersSlice";
+import { loadUsers, saveUserAccess } from "../../../redux/UsersSlice";
+import { getErrorMessage } from "../../../utils/api-client";
 
 const userOption = (user, roleName) => ({
   value: user.email,
@@ -30,14 +31,22 @@ const Label = ({ children }) => (
 // mode: "assign" | "remove"
 function ProjectUsersModal({ open, mode, project, onClose }) {
   const dispatch = useDispatch();
-  const users = useSelector((state) => state.users.users);
+  const userId = useSelector((state) => state.auth.user?.user_id);
+  const { users, loaded: usersLoaded } = useSelector((state) => state.users);
   const roles = useSelector((state) => state.roles.roles);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [roleId, setRoleId] = useState(undefined);
+  const [saving, setSaving] = useState(false);
+
+  // Sub-users come from the API; load them if the Users page hasn't yet
+  useEffect(() => {
+    if (open && !usersLoaded) dispatch(loadUsers(userId)).catch(() => {});
+  }, [open, usersLoaded, userId, dispatch]);
 
   const isAssign = mode === "assign";
   const projectName = project?.name;
-  const getMembership = (user) => user.projects.find((p) => p.name === projectName);
+  const projectId = project?.project_id;
+  const getMembership = (user) => user.projects.find((p) => p.project_id === projectId);
   const getRoleName = (id) => roles.find((r) => r.id === id)?.name;
 
   // Assign: users not in the project yet. Remove: users already in it.
@@ -47,13 +56,24 @@ function ProjectUsersModal({ open, mode, project, onClose }) {
 
   const canSubmit = selectedUsers.length > 0 && (!isAssign || roleId);
 
-  // TODO: call the assign / remove project users APIs
-  const handleSubmit = () => {
-    if (isAssign) {
-      dispatch(assignUsersToProject({ project: projectName, emails: selectedUsers, roleId }));
-    } else {
-      dispatch(removeUsersFromProject({ project: projectName, emails: selectedUsers }));
+  // Each user's full project list is saved with this project added or taken out
+  const handleSubmit = async () => {
+    setSaving(true);
+    const targets = users.filter((u) => selectedUsers.includes(u.email));
+    const results = await Promise.allSettled(
+      targets.map((user) => {
+        const others = user.projects.filter((p) => p.project_id !== projectId);
+        const projects = isAssign ? [...others, { project_id: projectId, roleId }] : others;
+        return dispatch(saveUserAccess(userId, user.subuser_id, projects));
+      })
+    );
+    setSaving(false);
+    const failed = results.filter((r) => r.status === "rejected");
+    if (failed.length) {
+      message.error(getErrorMessage(failed[0].reason, "Couldn't update some users."));
+      return;
     }
+    message.success(isAssign ? "Users assigned." : "Users removed.");
     onClose();
   };
 
@@ -79,14 +99,20 @@ function ProjectUsersModal({ open, mode, project, onClose }) {
         }
         footer={
           <div className="flex justify-end gap-2">
-            <CustomSecondaryButton label="Cancel" onClick={onClose} />
+            <CustomSecondaryButton label="Cancel" onClick={onClose} disabled={saving} />
             {isAssign ? (
-              <CustomButton label="Assign Users" disabled={!canSubmit} onClick={handleSubmit} />
+              <CustomButton
+                label="Assign Users"
+                disabled={!canSubmit}
+                loading={saving}
+                onClick={handleSubmit}
+              />
             ) : (
               <CustomButton
                 label="Remove Users"
                 danger
                 disabled={!canSubmit}
+                loading={saving}
                 onClick={handleSubmit}
               />
             )}

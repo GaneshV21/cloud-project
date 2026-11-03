@@ -31,16 +31,18 @@ const Label = ({ children, required }) => (
 const FieldError = ({ message }) =>
   message ? <p className="text-[12px] text-[#F04438] mt-1">{message}</p> : null;
 
+// allProjects: [{ project_id, name }]
 function CreateUserModal({ open, allProjects = [], existingEmails = [], onClose, onSave }) {
   const roles = useSelector((state) => state.roles.roles);
   const [form, setForm] = useState({
     name: "",
     email: "",
-    projects: [],
+    projectId: undefined,
     roleId: undefined,
     password: "",
   });
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
 
   const setField = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -56,7 +58,8 @@ function CreateUserModal({ open, allProjects = [], existingEmails = [], onClose,
     else if (existingEmails.some((e) => e.toLowerCase() === email)) {
       next.email = "A user with this email already exists.";
     }
-    if (!form.projects.length) next.projects = "Select at least one project.";
+    // One project at creation; more can be added later from Project Access
+    if (!form.projectId) next.projectId = "Select a project.";
     if (!form.roleId) next.roleId = "Select a role.";
     if (!form.password) next.password = "Password is required.";
     else if (!PASSWORD_RULES.every((rule) => rule.test(form.password))) {
@@ -66,14 +69,19 @@ function CreateUserModal({ open, allProjects = [], existingEmails = [], onClose,
     return !Object.keys(next).length;
   };
 
-  const handleSave = () => {
-    if (!validate()) return;
-    onSave({
-      name: form.name.trim(),
-      email: form.email.trim().toLowerCase(),
-      password: form.password,
-      projects: form.projects.map((name) => ({ name, roleId: form.roleId })),
-    });
+  const handleSave = async () => {
+    if (saving || !validate()) return;
+    setSaving(true);
+    try {
+      await onSave({
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        projects: [{ project_id: form.projectId, roleId: form.roleId }],
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -88,14 +96,14 @@ function CreateUserModal({ open, allProjects = [], existingEmails = [], onClose,
           <div className="flex flex-col">
             <span className="text-[17px] leading-6 font-semibold text-[#181D27]">Add User</span>
             <span className="text-[13px] font-normal text-[#535862]">
-              Create a sub-user and give them access to projects.
+              Create a sub-user with access to one project.
             </span>
           </div>
         }
         footer={
           <div className="flex justify-end gap-2">
-            <CustomSecondaryButton label="Cancel" onClick={onClose} />
-            <CustomButton label="Add User" onClick={handleSave} />
+            <CustomSecondaryButton label="Cancel" onClick={onClose} disabled={saving} />
+            <CustomButton label="Add User" onClick={handleSave} loading={saving} />
           </div>
         }
       >
@@ -127,34 +135,35 @@ function CreateUserModal({ open, allProjects = [], existingEmails = [], onClose,
             </div>
           </div>
 
-          {/* Projects */}
+          {/* Project */}
           <div>
-            <Label required>Projects</Label>
+            <Label required>Project</Label>
             <CustomSelect
-              mode="multiple"
-              allowClear
+              showSearch
               className="w-full"
-              placeholder="Select projects"
-              maxTagCount="responsive"
-              value={form.projects}
-              status={errors.projects ? "error" : undefined}
-              onChange={(value) => setField("projects", value)}
-              options={allProjects.map((name) => ({
-                value: name,
+              placeholder={allProjects.length ? "Select project" : "No projects yet"}
+              disabled={!allProjects.length}
+              value={form.projectId}
+              status={errors.projectId ? "error" : undefined}
+              onChange={(value) => setField("projectId", value)}
+              optionFilterProp="searchText"
+              options={allProjects.map(({ project_id, name }) => ({
+                value: project_id,
+                searchText: name,
                 label: (
                   <div className="flex items-center gap-2">
                     <div
                       className="h-5 w-5 shrink-0 rounded-md flex items-center justify-center text-white text-[10px] font-medium"
                       style={{ backgroundColor: getAvatarColor(name) }}
                     >
-                      {name[0]?.toUpperCase()}
+                      {name?.[0]?.toUpperCase()}
                     </div>
                     {name}
                   </div>
                 ),
               }))}
             />
-            <FieldError message={errors.projects} />
+            <FieldError message={errors.projectId} />
           </div>
 
           {/* Role */}
@@ -168,8 +177,7 @@ function CreateUserModal({ open, allProjects = [], existingEmails = [], onClose,
               onChange={(value) => setField("roleId", value)}
             />
             <p className="text-[12px] text-[#667085] mt-1">
-              Applied to every selected project. You can change it per project later from
-              Project Access.
+              More projects can be given later from Project Access.
             </p>
             <FieldError message={errors.roleId} />
           </div>

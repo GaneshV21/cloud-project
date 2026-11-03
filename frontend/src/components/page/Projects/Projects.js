@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import PageHeader from "../../../utils/page-header";
 import { CustomButton } from "../../../utils/custom-input";
 import {
@@ -9,20 +9,36 @@ import {
   DeleteOutlined,
   EditOutlined,
   FolderOpenOutlined,
+  InfoCircleOutlined,
   MoreOutlined,
   PlusOutlined,
   UserAddOutlined,
   UserDeleteOutlined,
 } from "@ant-design/icons";
-import { Dropdown, message, Spin } from "antd";
+import { Dropdown, message, Modal, Spin } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { getAvatarColor } from "../../../utils/common";
 import ProjectUsersModal from "./ProjectUsersModal";
 import ProjectModal from "./ProjectModal";
-import { renameProject } from "../../../redux/UsersSlice";
-import { setCurrentProject } from "../../../redux/ProjectSlice";
+import { loadUsers } from "../../../redux/UsersSlice";
+import { loadProjects, selectProject, upsertProject } from "../../../redux/ProjectSlice";
 import apiClient, { getErrorMessage } from "../../../utils/api-client";
-import { PROJECT_CREATE, PROJECT_LIST, PROJECT_UPDATE } from "../../../utils/api-endpoints";
+import {
+  PROJECT_CREATE,
+  PROJECT_DELETE,
+  PROJECT_SUMMARY,
+  PROJECT_UPDATE,
+} from "../../../utils/api-endpoints";
+
+// Resources that must be removed before a project can be deleted (keys from the summary API)
+const RESOURCES = [
+  { key: "instances", label: "Instances" },
+  { key: "keypairs", label: "Keypairs" },
+  { key: "networks", label: "Networks" },
+  { key: "security_groups", label: "Security groups" },
+  { key: "security_group_rules", label: "Security group rules" },
+  { key: "volumes", label: "Volumes" },
+];
 
 const formatDate = (date) => {
   const d = new Date(date);
@@ -35,13 +51,21 @@ const formatDate = (date) => {
 function Projects() {
   const [path, setPath] = useState("");
   const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const userId = useSelector((state) => state.auth.user?.user_id);
-  const [loading, setLoading] = useState(true);
-  const [projectData, setProjectData] = useState([]);
-  const currentProject = useSelector((state) => state.project.currentProject);
+  const {
+    projects: projectData,
+    currentProject,
+    loaded,
+  } = useSelector((state) => state.project);
+  const [loading, setLoading] = useState(!loaded);
   const [usersModal, setUsersModal] = useState(null);
   const [projectModal, setProjectModal] = useState(null);
+  const usersLoaded = useSelector((state) => state.users.loaded);
+  const [modal, contextHolder] = Modal.useModal();
+  // Service page the user was sent here from (by RequireProject), e.g. "/compute/instances"
+  const redirectTo = location.state?.from;
 
   const createProject = (e) => {
     e.stopPropagation();
@@ -52,14 +76,32 @@ function Projects() {
     if (!userId) return;
     setLoading(true);
     try {
-      const res = await apiClient.get(PROJECT_LIST(userId));
-      setProjectData(res?.data?.data ?? []);
+      await dispatch(loadProjects(userId));
     } catch (error) {
       message.error(getErrorMessage(error, "Couldn't load projects."));
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [dispatch, userId]);
+
+  // The backend updates users' project_roles on rename/delete: refresh them if already loaded
+  const refreshUsers = () => {
+    if (usersLoaded) dispatch(loadUsers(userId)).catch(() => {});
+  };
+
+  const chooseProject = async (project) => {
+    if (project.project_id === currentProject?.project_id) return;
+    try {
+      await dispatch(selectProject(userId, project));
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't select the project."));
+    }
+  };
+
+  // Once a project is selected (here or in the top bar), continue to the page the user wanted
+  useEffect(() => {
+    if (currentProject && redirectTo) navigate(redirectTo, { replace: true });
+  }, [currentProject, redirectTo, navigate]);
 
   // Modal stays open (with the user's input) if the request fails
   const saveProject = async ({ name, description }) => {
@@ -69,21 +111,15 @@ function Projects() {
         const original = projectModal.project;
         const res = await apiClient.put(PROJECT_UPDATE(userId, original.project_id), payload);
         const updated = res?.data?.data ?? { ...original, ...payload };
-        setProjectData((prev) => prev.map((p) => (p.project_id === original.project_id ? updated : p)));
-        if (original.name !== updated.name) {
-          dispatch(renameProject({ from: original.name, to: updated.name }));
-          // Keep the top-bar switcher's label in sync
-          if (currentProject?.project_id === updated.project_id) {
-            dispatch(setCurrentProject(updated));
-          }
-        }
+        // Also renames it in the top-bar switcher if it's the current project
+        dispatch(upsertProject(updated));
+        if (original.name !== updated.name) refreshUsers();
         message.success(res?.data?.message || "Project updated.");
       } else {
         const res = await apiClient.post(PROJECT_CREATE(userId), payload);
-        const created = res?.data?.data;
-        if (created) setProjectData((prev) => [...prev, created]);
-        else await fetchProjects();
         message.success(res?.data?.message || "Project created.");
+        // Reload: if this is the only project, the backend makes it the current one
+        await fetchProjects();
       }
       setProjectModal(null);
     } catch (error) {
@@ -112,10 +148,66 @@ function Projects() {
         setProjectModal({ mode: "edit", project: record });
         break;
       case "delete":
+        deleteProject(record);
         break;
       default:
         break;
     }
+  };
+
+  // Only an empty project can be deleted: check what's inside first
+  const deleteProject = async (project) => {
+    let counts;
+    try {
+      const res = await apiClient.get(PROJECT_SUMMARY(userId, project.project_id));
+      counts = res?.data?.data?.counts ?? {};
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't check the project's resources."));
+      return;
+    }
+
+    const remaining = RESOURCES.filter((r) => counts[r.key] > 0);
+    if (remaining.length) {
+      modal.warning({
+        title: `"${project.name}" can't be deleted yet`,
+        content: (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-[#535862]">
+              Delete these resources first, then try again:
+            </p>
+            <ul className="flex flex-col gap-1">
+              {remaining.map((r) => (
+                <li key={r.key} className="flex justify-between text-sm text-[#344054]">
+                  <span>{r.label}</span>
+                  <span className="font-semibold">{counts[r.key]}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ),
+        okText: "OK",
+      });
+      return;
+    }
+
+    modal.confirm({
+      title: `Delete "${project.name}"?`,
+      content: "This project is empty and will be removed. This can't be undone.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const res = await apiClient.delete(PROJECT_DELETE(userId, project.project_id));
+          message.success(res?.data?.message || "Project deleted.");
+          // Users lose their access to it
+          refreshUsers();
+          // Reload: if it was the current project the backend cleared it
+          await fetchProjects();
+        } catch (error) {
+          message.error(getErrorMessage(error, "Couldn't delete the project."));
+        }
+      },
+    });
   };
 
   useEffect(() => {
@@ -128,6 +220,7 @@ function Projects() {
 
   return (
     <>
+      {contextHolder}
       <PageHeader
         pathname={path}
         title="My Projects"
@@ -160,13 +253,29 @@ function Projects() {
         </div>
       )}
 
+      {!loading && projectData.length > 0 && !currentProject && (
+        <div className="flex items-start gap-3 mt-4 p-4 rounded-xl border-solid border-[1px] border-[#5142D4] bg-[#F8F7FF]">
+          <InfoCircleOutlined className="text-[18px] text-[#5142D4] mt-[2px]" />
+          <div>
+            <p className="text-sm font-semibold text-[#101828]">
+              Select a project to manage your services
+            </p>
+            <p className="text-sm text-[#535862]">
+              Instances, networks, volumes and keypairs live inside a project. Click a project
+              below, or create a new one, to continue
+              {redirectTo ? " to the page you were opening." : "."}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-5 mt-4">
         {!loading && projectData.map((item) => {
           const firstLetter = item.name?.[0]?.toUpperCase();
           return (
             <div
               key={item.project_id}
-              onClick={() => dispatch(setCurrentProject(item))}
+              onClick={() => chooseProject(item)}
               className={`bg-white border-solid border-[1px] rounded-xl p-4 flex flex-col gap-4 cursor-pointer transition-shadow hover:shadow-md ${
                 currentProject?.project_id === item.project_id
                   ? "border-[#5142D4]"

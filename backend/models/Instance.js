@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const InstanceSchema = new mongoose.Schema({
+  instance_id: { type: String, required: true, index: { unique: true } },
   name: { type: String },
   status: { type: String },
   os: { type: String },

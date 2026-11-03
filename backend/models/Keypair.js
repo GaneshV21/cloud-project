@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const KeypairSchema = new mongoose.Schema({
+  // Public id, e.g. "qwert2-gftjaj-ganer22q" (see utils/generate-id.js)
+  keypair_id: { type: String, required: true, index: { unique: true } },
   name: { type: String, required: true },
   type: { type: String, required: true },
   fingerprint: { type: String, default: "" },

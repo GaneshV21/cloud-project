@@ -10,9 +10,10 @@ const Keypairs = "/compute/keypairs";
 const Volumes = "/volumes";
 const Networks = "/network/networks";
 const SecurityGroups = "/network/security_groups";
-const Projects = "iam/projects";
-const Users = "iam/users";
-const Roles = "iam/roles";
+const SecurityGroupRules = "/network/security_groups/:securitygroup_id/rules";
+const Projects = "/iam/projects";
+const Users = "/iam/users";
+const Roles = "/iam/roles";
 const Profile = "/profile";
 const Billing = "/billing";
 
@@ -26,6 +27,7 @@ const PATH = {
   Volumes,
   Networks,
   SecurityGroups,
+  SecurityGroupRules,
   Projects,
   Users,
   Roles,
@@ -34,3 +36,7 @@ const PATH = {
 };
 
 export default PATH;
+
+// Rules page of one security group
+export const securityGroupRulesPath = (securityGroupId) =>
+  SecurityGroupRules.replace(":securitygroup_id", securityGroupId);

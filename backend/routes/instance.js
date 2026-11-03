@@ -14,12 +14,12 @@ router.post(
   InstanceController.createInstance,
 );
 router.get(
-  "/get/:user_id/:instance_id",
+  "/get/:user_id/:project_id/:instance_id",
   AuthMiddleWare,
   InstanceController.getInstance,
 );
 router.delete(
-  "/delete/:user_id/:instance_id",
+  "/delete/:user_id/:project_id/:instance_id",
   AuthMiddleWare,
   InstanceController.deleteInstance,
 );

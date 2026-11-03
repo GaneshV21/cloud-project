@@ -12,6 +12,8 @@ export function getPathSegmentsAsPascalCase(path) {
 }
 
 export function getStatus(item) {
+  // Records from the API may not have a status yet
+  if (!item) return <span className="text-sm text-gray-500">-</span>;
   let obj = {
     running: "bg-green-200 text-green-700",
     active: "bg-green-200 text-green-700",

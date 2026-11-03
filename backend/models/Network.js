@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const NetworkSchema = new mongoose.Schema({
+  // Public id, e.g. "qwert2-gftjaj-ganer22q" (see utils/generate-id.js)
+  network_id: { type: String, required: true, index: { unique: true } },
   name: { type: String },
   cidr: { type: String },
   status: { type: String },

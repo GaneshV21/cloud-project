@@ -133,7 +133,7 @@ function Keypairs() {
           columns={columns}
           dataSource={keypairCopyData}
           loading={loading}
-          rowKey="_id"
+          rowKey="keypair_id"
           bordered
         />
       </div>

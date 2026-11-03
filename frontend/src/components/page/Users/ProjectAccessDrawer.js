@@ -31,34 +31,40 @@ export const RoleSelect = ({ roles, ...props }) => {
   );
 };
 
-function ProjectAccessDrawer({ open, user, allProjects = [], onClose, onSave }) {
+// allProjects: [{ project_id, name }]
+function ProjectAccessDrawer({ open, user, allProjects = [], saving, onClose, onSave }) {
   const roles = useSelector((state) => state.roles.roles);
   const defaultRoleId = roles.find((r) => r.id === "reader")?.id ?? roles[0]?.id;
 
-  // Local draft: { [projectName]: roleId } — only saved when the user clicks Save
+  // Local draft: { [project_id]: roleId } — only saved when the user clicks Save
   const [access, setAccess] = useState(() =>
-    Object.fromEntries((user?.projects ?? []).map((p) => [p.name, p.roleId]))
+    Object.fromEntries((user?.projects ?? []).map((p) => [p.project_id, p.roleId]))
   );
   const [search, setSearch] = useState("");
 
-  const toggleProject = (name, enabled) => {
+  const toggleProject = (id, enabled) => {
     setAccess((prev) => {
       const next = { ...prev };
-      if (enabled) next[name] = prev[name] ?? defaultRoleId;
-      else delete next[name];
+      if (enabled) next[id] = prev[id] ?? defaultRoleId;
+      else delete next[id];
       return next;
     });
   };
 
-  const setRole = (name, roleId) => setAccess((prev) => ({ ...prev, [name]: roleId }));
+  const setRole = (id, roleId) => setAccess((prev) => ({ ...prev, [id]: roleId }));
 
+  // Only projects that still exist are saved
   const handleSave = () => {
-    onSave(Object.entries(access).map(([name, roleId]) => ({ name, roleId })));
+    onSave(
+      allProjects
+        .filter((p) => p.project_id in access)
+        .map((p) => ({ project_id: p.project_id, roleId: access[p.project_id] }))
+    );
   };
 
-  const assignedCount = Object.keys(access).length;
-  const visibleProjects = allProjects.filter((name) =>
-    name.toLowerCase().includes(search.toLowerCase())
+  const assignedCount = allProjects.filter((p) => p.project_id in access).length;
+  const visibleProjects = allProjects.filter((p) =>
+    (p.name ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -92,8 +98,8 @@ function ProjectAccessDrawer({ open, user, allProjects = [], onClose, onSave }) 
               {allProjects.length} projects
             </span>
             <div className="flex gap-2">
-              <CustomSecondaryButton label="Cancel" onClick={onClose} />
-              <CustomButton label="Save Access" onClick={handleSave} />
+              <CustomSecondaryButton label="Cancel" onClick={onClose} disabled={saving} />
+              <CustomButton label="Save Access" onClick={handleSave} loading={saving} />
             </div>
           </div>
         }
@@ -112,21 +118,21 @@ function ProjectAccessDrawer({ open, user, allProjects = [], onClose, onSave }) 
         )}
 
         <div className="flex flex-col gap-2">
-          {visibleProjects.map((name) => {
-            const enabled = name in access;
+          {visibleProjects.map(({ project_id: id, name }) => {
+            const enabled = id in access;
             return (
               <div
-                key={name}
+                key={id}
                 className={`flex items-center gap-3 p-3 rounded-xl border-solid border-[1px] transition-colors ${
                   enabled ? "border-[#5142D4] bg-[#F8F7FF]" : "border-[#EAECF0] bg-white"
                 }`}
               >
-                <Switch size="small" checked={enabled} onChange={(v) => toggleProject(name, v)} />
+                <Switch size="small" checked={enabled} onChange={(v) => toggleProject(id, v)} />
                 <div
                   className="h-8 w-8 shrink-0 rounded-lg flex items-center justify-center text-white text-sm font-medium"
                   style={{ backgroundColor: getAvatarColor(name) }}
                 >
-                  {name[0]?.toUpperCase()}
+                  {name?.[0]?.toUpperCase()}
                 </div>
                 <p
                   className={`flex-1 text-sm font-medium truncate ${
@@ -139,8 +145,8 @@ function ProjectAccessDrawer({ open, user, allProjects = [], onClose, onSave }) 
                   roles={roles}
                   className="w-[160px]"
                   disabled={!enabled}
-                  value={enabled ? access[name] : undefined}
-                  onChange={(roleId) => setRole(name, roleId)}
+                  value={enabled ? access[id] : undefined}
+                  onChange={(roleId) => setRole(id, roleId)}
                 />
               </div>
             );

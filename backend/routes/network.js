@@ -14,17 +14,17 @@ router.post(
   NetworkController.createNetwork,
 );
 router.get(
-  "/get/:user_id/:network_id",
+  "/get/:user_id/:project_id/:network_id",
   AuthMiddleWare,
   NetworkController.getNetwork,
 );
 router.put(
-  "/update/:user_id/:network_id",
+  "/update/:user_id/:project_id/:network_id",
   AuthMiddleWare,
   NetworkController.updateNetwork,
 );
 router.delete(
-  "/delete/:user_id/:network_id",
+  "/delete/:user_id/:project_id/:network_id",
   AuthMiddleWare,
   NetworkController.deleteNetwork,
 );

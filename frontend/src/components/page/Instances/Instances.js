@@ -161,7 +161,7 @@ function Instances() {
           columns={columns}
           dataSource={instanceCopyData}
           loading={loading}
-          rowKey="_id"
+          rowKey="instance_id"
           bordered
         />
       </div>

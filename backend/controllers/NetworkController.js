@@ -1,5 +1,7 @@
 const Network = require("../models/Network");
+const { createWithUniqueId } = require("../utils/generate-id");
 const { findUserProject, projectNotFound } = require("../utils/project-access");
+const { QUOTAS, quotaExceeded } = require("../utils/quotas");
 
 exports.listNetwork = async function (req, res, next) {
   try {
@@ -8,6 +10,7 @@ exports.listNetwork = async function (req, res, next) {
     const networkList = await Network.find({ user_id, project_id });
     res.status(200).json({
       data: networkList,
+      quota: QUOTAS.networks,
       message: "Request Processed Successfully",
     });
   } catch (error) {
@@ -19,15 +22,21 @@ exports.createNetwork = async function (req, res, next) {
   try {
     let { user_id, project_id } = req.params;
     if (!(await findUserProject(user_id, project_id))) return projectNotFound(res);
+    if ((await Network.countDocuments({ user_id, project_id })) >= QUOTAS.networks) {
+      return quotaExceeded(res, `a project can have up to ${QUOTAS.networks} networks.`);
+    }
     const { name, cidr, status, gatewayip } = req.body;
-    const networkCreate = await Network.create({
-      user_id,
-      name,
-      cidr,
-      status,
-      gatewayip,
-      project_id,
-    });
+    const networkCreate = await createWithUniqueId((network_id) =>
+      Network.create({
+        network_id,
+        user_id,
+        name,
+        cidr,
+        status,
+        gatewayip,
+        project_id,
+      }),
+    );
     res.status(200).json({
       data: networkCreate,
       message: "Created Successfully",
@@ -39,8 +48,8 @@ exports.createNetwork = async function (req, res, next) {
 
 exports.getNetwork = async function (req, res, next) {
   try {
-    let { user_id, network_id } = req.params;
-    const networkGet = await Network.findOne({ user_id, _id: network_id });
+    let { user_id, project_id, network_id } = req.params;
+    const networkGet = await Network.findOne({ user_id, project_id, network_id });
     if (!networkGet) {
       return res.status(404).json({
         data: {},
@@ -58,10 +67,10 @@ exports.getNetwork = async function (req, res, next) {
 
 exports.updateNetwork = async function (req, res, next) {
   try {
-    let { user_id, network_id } = req.params;
+    let { user_id, project_id, network_id } = req.params;
     const { name, cidr, status, gatewayip } = req.body;
     const networkUpdate = await Network.findOneAndUpdate(
-      { user_id, _id: network_id },
+      { user_id, project_id, network_id },
       { name, cidr, status, gatewayip },
       { new: true },
     );
@@ -82,10 +91,11 @@ exports.updateNetwork = async function (req, res, next) {
 
 exports.deleteNetwork = async function (req, res, next) {
   try {
-    let { user_id, network_id } = req.params;
+    let { user_id, project_id, network_id } = req.params;
     const networkDelete = await Network.deleteOne({
       user_id,
-      _id: network_id,
+      project_id,
+      network_id,
     });
     res.status(200).json({
       data: networkDelete,

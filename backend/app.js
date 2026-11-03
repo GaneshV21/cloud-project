@@ -11,6 +11,7 @@ var securityGroupRouter = require("./routes/securitygroup");
 var volumeRouter = require("./routes/volume");
 var projectRouter = require("./routes/project");
 var keypairRouter = require("./routes/keypair");
+var subUserRouter = require("./routes/subuser");
 const cors = require("cors");
 
 require("./config/db");
@@ -32,6 +33,7 @@ app.use("/securitygroup", securityGroupRouter);
 app.use("/volume", volumeRouter);
 app.use("/project", projectRouter);
 app.use("/keypair", keypairRouter);
+app.use("/subuser", subUserRouter);
 
 // error handler
 app.use(function (err, req, res, next) {

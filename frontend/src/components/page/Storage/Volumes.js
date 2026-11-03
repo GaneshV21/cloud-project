@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import { message } from "antd";
 import { useLocation } from "react-router-dom";
 import CustomTable from "../../../utils/custom-table";
 import SearchInput from "../../../utils/search-input";
@@ -6,8 +8,10 @@ import { CustomButton } from "../../../utils/custom-input";
 import { PlusOutlined } from "@ant-design/icons";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PageHeader from "../../../utils/page-header";
-import { getStatus } from "../../../utils/common";
+import { getStatus, toDetail } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
+import apiClient, { getErrorMessage } from "../../../utils/api-client";
+import { VOLUME_LIST } from "../../../utils/api-endpoints";
 
 function Volumes() {
   const [searchValue, setSearchValue] = useState("");
@@ -17,19 +21,10 @@ function Volumes() {
     state: false,
   });
   const location = useLocation();
-  const data = [
-    { name: "Volume-01", volumeType: "SSD", size: "50 GB", attachedTo: "Instance 1", status: "In-use" },
-    { name: "Volume-02", volumeType: "HDD", size: "100 GB", attachedTo: "Instance 2", status: "In-use" },
-    { name: "Volume-03", volumeType: "SSD", size: "20 GB", attachedTo: "Unattached", status: "Available" },
-    { name: "Volume-04", volumeType: "SSD", size: "250 GB", attachedTo: "Instance 4", status: "In-use" },
-    { name: "Volume-05", volumeType: "HDD", size: "500 GB", attachedTo: "Unattached", status: "Available" },
-    { name: "Volume-06", volumeType: "SSD", size: "50 GB", attachedTo: "Instance 6", status: "In-use" },
-    { name: "Volume-07", volumeType: "SSD", size: "100 GB", attachedTo: "Instance 7", status: "In-use" },
-    { name: "Volume-08", volumeType: "HDD", size: "1 TB", attachedTo: "Unattached", status: "Available" },
-    { name: "Volume-09", volumeType: "SSD", size: "20 GB", attachedTo: "Instance 9", status: "In-use" },
-    { name: "Volume-10", volumeType: "SSD", size: "50 GB", attachedTo: "Unattached", status: "Available" },
-    { name: "Volume-11", volumeType: "HDD", size: "200 GB", attachedTo: "Instance 11", status: "In-use" },
-  ];
+  const userId = useSelector((state) => state.auth.user?.user_id);
+  const currentProject = useSelector((state) => state.project.currentProject);
+  const projectId = currentProject?.project_id;
+  const [loading, setLoading] = useState(false);
   const [volumeData, setVolumeData] = useState([]);
   const [volumeCopyData, setVolumeCopyData] = useState([]);
 
@@ -41,7 +36,7 @@ function Volumes() {
       render: (item, record) => (
         <p
           className="text-sm text-gray-900 underline cursor-pointer"
-          onClick={() => setVolumeDetail({ data: record, state: true })}
+          onClick={() => setVolumeDetail({ data: toDetail(record), state: true })}
         >
           {item}
         </p>
@@ -49,7 +44,7 @@ function Volumes() {
     },
     {
       title: "Volume Type",
-      dataIndex: "volumeType",
+      dataIndex: "volume_type",
       key: "volumeType",
       render: (item) => <p className="text-sm text-gray-900">{item}</p>,
     },
@@ -61,7 +56,7 @@ function Volumes() {
     },
     {
       title: "Attached To",
-      dataIndex: "attachedTo",
+      dataIndex: "attached_to",
       key: "attachedTo",
       render: (item) => <p className="text-sm text-gray-900">{item}</p>,
     },
@@ -91,23 +86,38 @@ function Volumes() {
     e.stopPropagation();
   };
 
-  useEffect(() => {
-    setVolumeCopyData(
-      volumeData?.filter((item) => {
-        return (
-          item.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.volumeType.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.attachedTo.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.status.toLowerCase().includes(searchValue.toLowerCase())
-        );
-      }),
-    );
-  }, [volumeData, searchValue]);
+  // Volumes of the project selected in the top bar
+  const fetchVolumes = useCallback(async () => {
+    if (!userId || !projectId) {
+      setVolumeData([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await apiClient.get(VOLUME_LIST(userId, projectId));
+      setVolumeData(res?.data?.data ?? []);
+    } catch (error) {
+      setVolumeData([]);
+      message.error(getErrorMessage(error, "Couldn't load volumes."));
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, projectId]);
 
   useEffect(() => {
-    setVolumeData(data);
-    setVolumeCopyData(data);
-  }, []);
+    fetchVolumes();
+  }, [fetchVolumes]);
+
+  useEffect(() => {
+    const search = searchValue.toLowerCase();
+    setVolumeCopyData(
+      volumeData?.filter((item) =>
+        [item.name, item.volume_type, item.attached_to, item.status].some((value) =>
+          (value ?? "").toLowerCase().includes(search)
+        )
+      ),
+    );
+  }, [volumeData, searchValue]);
 
   useEffect(() => {
     setPath(location.pathname);
@@ -118,13 +128,18 @@ function Volumes() {
       <PageHeader
         pathname={path}
         title="Volumes"
-        description="Create, attach and manage block storage volumes."
+        description={
+          currentProject
+            ? `Create, attach and manage block storage volumes in ${currentProject.name}.`
+            : "Select a project in the top bar to see its volumes."
+        }
       >
         <SearchInput value={searchValue} setSearchValue={setSearchValue} />
         <CustomButton
           label="Create Volume"
           icon={<PlusOutlined />}
           onClick={createVolume}
+          disabled={!projectId}
         />
       </PageHeader>
       <div className="mt-5">
@@ -137,6 +152,8 @@ function Volumes() {
           }
           columns={columns}
           dataSource={volumeCopyData}
+          loading={loading}
+          rowKey="volume_id"
           bordered
         />
       </div>

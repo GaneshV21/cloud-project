@@ -9,6 +9,7 @@ import Keypairs from "./components/page/Instances/Keypairs";
 import Volumes from "./components/page/Storage/Volumes";
 import Networks from "./components/page/Network/Networks";
 import SecurityGroups from "./components/page/Network/SecurityGroups";
+import SecurityGroupRules from "./components/page/Network/SecurityGroupRules";
 import Projects from "./components/page/Projects/Projects";
 import Users from "./components/page/Users/Users";
 import Roles from "./components/page/Roles/Roles";
@@ -16,6 +17,7 @@ import Profile from "./components/page/Profile/Profile";
 import Billing from "./components/page/Billing/Billing";
 import PATH from "../src/utils/Path";
 import PrivateRoutes from "./utils/private-routes";
+import RequireProject from "./utils/require-project";
 import NotFoundPage from "./utils/not-found";
 import CreateInstance from "./pages/Instances/CreateInstance";
 function App() {
@@ -28,12 +30,16 @@ function App() {
           <Route element={<PrivateRoutes />}>
             <Route element={<MenuItems />}>
               <Route path={PATH.Dashboard} element={<Dashboard />} />
-              <Route path={PATH.Instances} element={<Instances />} />
-              <Route path={PATH.CreateInstance} element={<CreateInstance />} />
-              <Route path={PATH.Keypairs} element={<Keypairs />} />
-              <Route path={PATH.Volumes} element={<Volumes />} />
-              <Route path={PATH.Networks} element={<Networks />} />
-              <Route path={PATH.SecurityGroups} element={<SecurityGroups />} />
+              {/* Service pages: only reachable with a selected project */}
+              <Route element={<RequireProject />}>
+                <Route path={PATH.Instances} element={<Instances />} />
+                <Route path={PATH.CreateInstance} element={<CreateInstance />} />
+                <Route path={PATH.Keypairs} element={<Keypairs />} />
+                <Route path={PATH.Volumes} element={<Volumes />} />
+                <Route path={PATH.Networks} element={<Networks />} />
+                <Route path={PATH.SecurityGroups} element={<SecurityGroups />} />
+                <Route path={PATH.SecurityGroupRules} element={<SecurityGroupRules />} />
+              </Route>
               <Route path={PATH.Projects} element={<Projects />} />
               <Route path={PATH.Users} element={<Users />} />
               <Route path={PATH.Roles} element={<Roles />} />

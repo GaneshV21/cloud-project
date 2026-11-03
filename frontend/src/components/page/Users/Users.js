@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import CustomTable from "../../../utils/custom-table";
 import SearchInput from "../../../utils/search-input";
@@ -9,14 +9,16 @@ import {
   PlusOutlined,
   SafetyCertificateOutlined,
 } from "@ant-design/icons";
-import { Dropdown } from "antd";
+import { Dropdown, message, Modal } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import PageHeader from "../../../utils/page-header";
 import { getAvatarColor, getStatus } from "../../../utils/common";
 import Drawer from "../../../utils/drawer";
 import ProjectAccessDrawer from "./ProjectAccessDrawer";
-import { addUser, setUserProjects } from "../../../redux/UsersSlice";
+import { loadUsers, saveUserAccess, toProjectRoles } from "../../../redux/UsersSlice";
+import apiClient, { getErrorMessage } from "../../../utils/api-client";
+import { SUBUSER_CREATE, SUBUSER_DELETE } from "../../../utils/api-endpoints";
 import CreateUserModal from "./CreateUserModal";
 
 function Users() {
@@ -30,17 +32,49 @@ function Users() {
   const dispatch = useDispatch();
   const roles = useSelector((state) => state.roles.roles);
   const getRoleName = (roleId) => roles.find((r) => r.id === roleId)?.name ?? "No role";
-  // TODO: replace with the projects API
-  const allProjects = ["Dev Project", "Staging Project", "Prod Project", "QA Project", "Analytics"];
+  const userId = useSelector((state) => state.auth.user?.user_id);
+  // Real projects (loaded by the top-bar project switcher): [{ project_id, name }]
+  const allProjects = useSelector((state) => state.project.projects);
   const userData = useSelector((state) => state.users.users);
+  const [loading, setLoading] = useState(false);
   const [userCopyData, setUserCopyData] = useState([]);
   // Email of the user whose project access is being edited
   const [accessUser, setAccessUser] = useState(null);
   const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [savingAccess, setSavingAccess] = useState(false);
+  const [modal, contextHolder] = Modal.useModal();
 
-  // TODO: hook up to the backend API
-  const updateUserProjects = (email, projects) => {
-    dispatch(setUserProjects({ email, projects }));
+  // Drawer stays open (with the changes) if the request fails
+  const updateUserProjects = async (email, projects) => {
+    const user = userData.find((u) => u.email === email);
+    setSavingAccess(true);
+    try {
+      const res = await dispatch(saveUserAccess(userId, user.subuser_id, projects));
+      message.success(res?.data?.message || "Access updated.");
+      setAccessUser(null);
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't update the user's access."));
+    } finally {
+      setSavingAccess(false);
+    }
+  };
+
+  const deleteUser = (record) => {
+    modal.confirm({
+      title: `Delete "${record.name}"?`,
+      content: "This user and their project access will be removed. This can't be undone.",
+      okText: "Delete",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          const res = await apiClient.delete(SUBUSER_DELETE(userId, record.subuser_id));
+          message.success(res?.data?.message || "User deleted.");
+          await fetchUsers();
+        } catch (error) {
+          message.error(getErrorMessage(error, "Couldn't delete the user."));
+        }
+      },
+    });
   };
 
   const actionItems = [
@@ -50,7 +84,7 @@ function Users() {
     { key: "deleteUser", label: "Delete User", icon: <DeleteOutlined />, danger: true },
   ];
 
-  // TODO: hook these up to the backend APIs
+  // TODO: hook reset password up to the backend API
   const onAction = (key, record) => {
     switch (key) {
       case "projectAccess":
@@ -59,6 +93,7 @@ function Users() {
       case "resetPassword":
         break;
       case "deleteUser":
+        deleteUser(record);
         break;
       default:
         break;
@@ -122,7 +157,7 @@ function Users() {
             )}
             {visible.map((project) => (
               <span
-                key={project.name}
+                key={project.project_id}
                 className="flex items-center rounded-md overflow-hidden border-solid border-[1px] border-[#EAECF0] text-[12px]"
               >
                 <span className="px-2 py-[1px] bg-white text-[#344054]">{project.name}</span>
@@ -173,20 +208,47 @@ function Users() {
     setCreateUserOpen(true);
   };
 
-  // TODO: call the create user API with the password; only the user details go into the store
-  const createUser = ({ password, ...user }) => {
-    dispatch(addUser({ ...user, status: "Active" }));
-    setCreateUserOpen(false);
+  // Sub-users created by the logged-in user
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      await dispatch(loadUsers(userId));
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't load users."));
+    } finally {
+      setLoading(false);
+    }
+  }, [dispatch, userId]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  // Modal stays open (with the user's input) if the request fails
+  const createUser = async ({ name, email, password, projects }) => {
+    try {
+      const res = await apiClient.post(SUBUSER_CREATE(userId), {
+        name,
+        email,
+        password,
+        projects: toProjectRoles(projects, roles),
+      });
+      message.success(res?.data?.message || "User created.");
+      setCreateUserOpen(false);
+      await fetchUsers();
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't create the user."));
+    }
   };
 
   useEffect(() => {
     setUserCopyData(
       userData?.filter((item) => {
         return (
-          item.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-          item.email.toLowerCase().includes(searchValue.toLowerCase()) ||
+          (item.name ?? "").toLowerCase().includes(searchValue.toLowerCase()) ||
+          (item.email ?? "").toLowerCase().includes(searchValue.toLowerCase()) ||
           item.projects.some((p) =>
-            p.name.toLowerCase().includes(searchValue.toLowerCase())
+            (p.name ?? "").toLowerCase().includes(searchValue.toLowerCase())
           )
         );
       }),
@@ -199,6 +261,7 @@ function Users() {
 
   return (
     <>
+      {contextHolder}
       <PageHeader
         pathname={path}
         title="Users"
@@ -221,6 +284,8 @@ function Users() {
           }
           columns={columns}
           dataSource={userCopyData}
+          loading={loading}
+          rowKey="subuser_id"
           bordered
         />
       </div>
@@ -246,11 +311,9 @@ function Users() {
           open={!!accessUser}
           user={userData.find((u) => u.email === accessUser)}
           allProjects={allProjects}
+          saving={savingAccess}
           onClose={() => setAccessUser(null)}
-          onSave={(projects) => {
-            updateUserProjects(accessUser, projects);
-            setAccessUser(null);
-          }}
+          onSave={(projects) => updateUserProjects(accessUser, projects)}
         />
       )}
     </>

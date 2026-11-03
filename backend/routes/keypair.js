@@ -14,12 +14,12 @@ router.post(
   KeypairController.createKeypair,
 );
 router.get(
-  "/get/:user_id/:keypair_id",
+  "/get/:user_id/:project_id/:keypair_id",
   AuthMiddleWare,
   KeypairController.getKeypair,
 );
 router.delete(
-  "/delete/:user_id/:keypair_id",
+  "/delete/:user_id/:project_id/:keypair_id",
   AuthMiddleWare,
   KeypairController.deleteKeypair,
 );

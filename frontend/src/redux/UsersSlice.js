@@ -1,101 +1,70 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { clearToken } from "./AuthSlice";
+import apiClient from "../utils/api-client";
+import { PROJECT_MANAGE_USER, SUBUSER_LIST } from "../utils/api-endpoints";
 
-// Each user has a list of projects, with their role in each one.
-// TODO: load users from the backend instead of this initial state
+// users: sub-users from the backend (subuser_id, name, email, status, ...).
+// Each user's project_roles is also kept as projects ([{ project_id, name, roleId }]) for the UI.
 const initialState = {
-  users: [
-    {
-      name: "Vasanth K",
-      email: "vasanth@example.com",
-      status: "Active",
-      projects: [
-        { name: "Dev Project", roleId: "member" },
-        { name: "Staging Project", roleId: "member" },
-        { name: "Prod Project", roleId: "create-role" },
-        { name: "QA Project", roleId: "reader" },
-      ],
-    },
-    {
-      name: "Arun Kumar",
-      email: "arun@example.com",
-      status: "Active",
-      projects: [
-        { name: "Dev Project", roleId: "member" },
-        { name: "QA Project", roleId: "member" },
-      ],
-    },
-    {
-      name: "Priya S",
-      email: "priya@example.com",
-      status: "Active",
-      projects: [{ name: "Staging Project", roleId: "member" }],
-    },
-    {
-      name: "Karthik R",
-      email: "karthik@example.com",
-      status: "Inactive",
-      projects: [],
-    },
-    {
-      name: "Divya M",
-      email: "divya@example.com",
-      status: "Active",
-      projects: [
-        { name: "Dev Project", roleId: "reader" },
-        { name: "Analytics", roleId: "create-role" },
-      ],
-    },
-  ],
+  users: [],
+  loaded: false,
 };
+
+const withProjects = (user) => ({
+  ...user,
+  projects: (user.project_roles ?? []).map((r) => ({
+    project_id: r.project_id,
+    name: r.project_name,
+    roleId: r.role,
+  })),
+});
 
 export const UsersSlice = createSlice({
   name: "UsersSlice",
   initialState,
   reducers: {
-    // payload: { name, email, status, projects } — never store the password here
-    addUser: (state, action) => {
-      state.users.push(action.payload);
+    // payload: sub-users from the list API
+    setUsers: (state, action) => {
+      state.users = action.payload.map(withProjects);
+      state.loaded = true;
     },
-    // payload: { email, projects }
-    setUserProjects: (state, action) => {
-      const user = state.users.find((u) => u.email === action.payload.email);
-      if (user) user.projects = action.payload.projects;
+    // payload: one sub-user from the API (e.g. after manage-user)
+    upsertUser: (state, action) => {
+      const user = withProjects(action.payload);
+      const index = state.users.findIndex((u) => u.subuser_id === user.subuser_id);
+      if (index === -1) state.users.push(user);
+      else state.users[index] = user;
     },
-    // payload: { project, emails, roleId }
-    assignUsersToProject: (state, action) => {
-      const { project, emails, roleId } = action.payload;
-      state.users.forEach((user) => {
-        if (emails.includes(user.email) && !user.projects.some((p) => p.name === project)) {
-          user.projects.push({ name: project, roleId });
-        }
-      });
-    },
-    // payload: { project, emails }
-    removeUsersFromProject: (state, action) => {
-      const { project, emails } = action.payload;
-      state.users.forEach((user) => {
-        if (emails.includes(user.email)) {
-          user.projects = user.projects.filter((p) => p.name !== project);
-        }
-      });
-    },
-    // payload: { from, to } — keeps memberships pointing at a renamed project
-    renameProject: (state, action) => {
-      const { from, to } = action.payload;
-      state.users.forEach((user) => {
-        user.projects.forEach((p) => {
-          if (p.name === from) p.name = to;
-        });
-      });
-    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(clearToken, () => initialState);
   },
 });
 
-export const {
-  addUser,
-  setUserProjects,
-  assignUsersToProject,
-  removeUsersFromProject,
-  renameProject,
-} = UsersSlice.actions;
+export const { setUsers, upsertUser } = UsersSlice.actions;
+
+// [{ project_id, roleId }] -> what the API stores: [{ project_id, role, permissions }]
+export const toProjectRoles = (projects, roles) =>
+  projects.map(({ project_id, roleId }) => ({
+    project_id,
+    role: roleId,
+    permissions: roles.find((r) => r.id === roleId)?.permissions ?? [],
+  }));
+
+// Sub-users created by this user
+export const loadUsers = (userId) => async (dispatch) => {
+  if (!userId) return;
+  const res = await apiClient.get(SUBUSER_LIST(userId));
+  dispatch(setUsers(res?.data?.data ?? []));
+};
+
+// Replaces a sub-user's project access. projects: [{ project_id, roleId }]
+export const saveUserAccess = (userId, subuserId, projects) => async (dispatch, getState) => {
+  const res = await apiClient.put(PROJECT_MANAGE_USER(userId, subuserId), {
+    projects: toProjectRoles(projects, getState().roles.roles),
+  });
+  if (res?.data?.data) dispatch(upsertUser(res.data.data));
+  return res;
+};
+
 export default UsersSlice.reducer;

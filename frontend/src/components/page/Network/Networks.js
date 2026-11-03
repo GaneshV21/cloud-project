@@ -147,7 +147,7 @@ function Networks() {
           columns={columns}
           dataSource={networkCopyData}
           loading={loading}
-          rowKey="_id"
+          rowKey="network_id"
           bordered
         />
       </div>

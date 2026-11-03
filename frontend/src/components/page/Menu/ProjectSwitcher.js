@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { message } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { CustomSelect } from "../../../utils/custom-input";
 import { getAvatarColor } from "../../../utils/common";
-import apiClient from "../../../utils/api-client";
-import { PROJECT_LIST } from "../../../utils/api-endpoints";
-import { setCurrentProject } from "../../../redux/ProjectSlice";
+import { getErrorMessage } from "../../../utils/api-client";
+import { loadProjects, selectProject } from "../../../redux/ProjectSlice";
+import PATH from "../../../utils/Path";
 
 const ProjectBadge = ({ name }) => (
   <div
@@ -15,69 +16,53 @@ const ProjectBadge = ({ name }) => (
   </div>
 );
 
-// Top-bar dropdown that picks the project every module works in
+// Top-bar dropdown that picks the project every service page works in
 function ProjectSwitcher() {
   const dispatch = useDispatch();
   const userId = useSelector((state) => state.auth.user?.user_id);
-  const currentProject = useSelector((state) => state.project.currentProject);
-  const [projects, setProjects] = useState([]);
+  const { projects, currentProject, loaded } = useSelector((state) => state.project);
   const [loading, setLoading] = useState(false);
-  // Latest selection, read after a fetch without re-creating fetchProjects
-  const currentRef = useRef(currentProject);
-  currentRef.current = currentProject;
 
-  const fetchProjects = useCallback(async () => {
-    if (!userId) return;
+  const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get(PROJECT_LIST(userId));
-      const list = res?.data?.data ?? [];
-      setProjects(list);
-      // Nothing selected, or the saved project no longer exists: fall back to the first one
-      const current = currentRef.current;
-      if (!list.some((p) => p.project_id === current?.project_id)) {
-        dispatch(setCurrentProject(list[0] ?? null));
-      }
-    } catch {
-      // The switcher just stays empty; pages show their own errors
+      await dispatch(loadProjects(userId));
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't load projects."));
     } finally {
       setLoading(false);
     }
-  }, [userId, dispatch]);
+  }, [dispatch, userId]);
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    refresh();
+  }, [refresh]);
 
-  // Selected somewhere else (e.g. a project card) but not in our list yet: refresh the list
-  const currentId = currentProject?.project_id;
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    // The initial fetch above already covers the first render
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+  const handleChange = async (projectId) => {
+    const project = projects.find((p) => p.project_id === projectId);
+    if (!project || projectId === currentProject?.project_id) return;
+    try {
+      await dispatch(selectProject(userId, project));
+      // Full reload on the dashboard so every page starts fresh for the new project
+      window.location.assign(PATH.Dashboard);
+    } catch (error) {
+      message.error(getErrorMessage(error, "Couldn't switch project."));
     }
-    if (currentId && !loading && !projects.some((p) => p.project_id === currentId)) {
-      fetchProjects();
-    }
-    // Only react to a change of selection, not to every list update
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentId]);
+  };
 
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm text-gray-500">Project</span>
       <CustomSelect
         className="w-[240px]"
-        placeholder={loading ? "Loading projects..." : "No projects"}
+        placeholder={
+          !loaded ? "Loading projects..." : projects.length ? "Select a project" : "No projects"
+        }
         loading={loading}
         value={currentProject?.project_id}
         // Re-fetch on open so newly created or renamed projects show up
-        onOpenChange={(open) => open && fetchProjects()}
-        onChange={(projectId) =>
-          dispatch(setCurrentProject(projects.find((p) => p.project_id === projectId)))
-        }
+        onOpenChange={(open) => open && refresh()}
+        onChange={handleChange}
         options={projects.map((project) => ({
           value: project.project_id,
           label: (
